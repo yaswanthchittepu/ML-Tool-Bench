@@ -139,6 +139,9 @@ stages and their tool masks are defined in `src/mltoolbench/tools/catalog.yaml`.
 - The metric is each competition's official metric: RMSE, RMSLE, accuracy, AUC, MCC, macro-F1 or
   normalized Gini. It's converted to the **percentile** of the public Kaggle leaderboard that the
   score beats.
+- For RMSLE tasks, negative predictions are clipped to 0 before scoring. The run stays valid, the
+  error still counts, and `result.json` records how many values were clipped. The paper's evaluation
+  skipped predictions below -1 instead; `grading: paper` in `baselines/paper/` reproduces that.
 - Per task over N = 10 runs, **consistency** is the fraction of valid runs. The **median percentile**
   counts invalid runs as 0.
 - The headline number is the median across tasks.

@@ -98,3 +98,36 @@ def test_find_prediction_column(df, kind, expected):
 def test_probability_task_rejects_hard_labels():
     with pytest.raises(InvalidSubmission):
         find_prediction_column(pd.DataFrame({"id": [1, 2], "y": [0.0, 1.0]}), "probability")
+
+
+@pytest.fixture
+def rmsle_task(tmp_path, monkeypatch):
+    monkeypatch.setenv("MLTOOLBENCH_DATA", str(tmp_path))
+    get_task.cache_clear()
+    t = get_task("calorie_expenditure_prediction")  # metric: rmsle
+    t.private_dir.mkdir(parents=True)
+    pd.DataFrame({"id": [1, 2, 3, 4], "Calories": [10.0, 20.0, 30.0, 40.0]}).to_csv(
+        t.private_dir / "answers.csv", index=False)
+    yield t
+    get_task.cache_clear()
+
+
+def test_rmsle_clips_negative_predictions(rmsle_task):
+    neg = grade_submission(rmsle_task, pd.DataFrame({"Calories": [11.0, -5.0, 31.0, 39.0]}))
+    zero = grade_submission(rmsle_task, pd.DataFrame({"Calories": [11.0, 0.0, 31.0, 39.0]}))
+    good = grade_submission(rmsle_task, pd.DataFrame({"Calories": [11.0, 19.0, 31.0, 39.0]}))
+    assert neg.valid and neg.n_clipped == 1
+    assert neg.metric == pytest.approx(zero.metric)  # -5 is scored as 0, never dropped
+    assert neg.metric > good.metric                  # so the bad prediction still costs
+
+
+def test_rmsle_paper_profile_skips_rows_below_minus_one(rmsle_task):
+    neg = grade_submission(rmsle_task, pd.DataFrame({"Calories": [11.0, -5.0, 31.0, 39.0]}), profile="paper")
+    other_rows = np.sqrt(np.mean((np.log1p([11.0, 31.0, 39.0]) - np.log1p([10.0, 30.0, 40.0])) ** 2))
+    assert neg.valid and neg.n_clipped == 0
+    assert neg.metric == pytest.approx(other_rows)  # the -5 row was silently left out of the mean
+
+
+def test_rmsle_minus_one_is_finite_by_default(rmsle_task):
+    g = grade_submission(rmsle_task, pd.DataFrame({"Calories": [11.0, -1.0, 31.0, 39.0]}))
+    assert np.isfinite(g.metric)
