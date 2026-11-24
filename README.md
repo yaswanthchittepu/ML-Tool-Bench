@@ -25,7 +25,7 @@ cp .env.example .env                    # set OPENAI_MODEL and OPENAI_API_KEY
 ```
 
 - macOS: xgboost and LightGBM need OpenMP. Install it with `brew install libomp`.
-- The ML stack (pandas, scikit-learn, xgboost, LightGBM, CatBoost) is pinned to the paper's versions.
+- The ML stack (pandas, scikit-learn, xgboost, LightGBM, CatBoost) is pinned to exact versions.
   CV scores feed the MCTS rewards, so results are only comparable on these versions.
 - `pip install -e .` alone installs only the tools, environment and grader. That's enough to evaluate
   your own agent.
@@ -39,7 +39,7 @@ The datasets are not redistributed. You need a [Kaggle API token](https://www.ka
 mltoolbench prepare                        # all 15 tasks; or --tasks spaceship_titanic ...
 ```
 
-This downloads each competition and makes the paper's split deterministically: up to 10,000 rows
+This downloads each competition and makes the benchmark's split deterministically: up to 10,000 rows
 sampled with seed 42, classification targets label-encoded, and 20% held out (stratified for
 classification). Files go under `$MLTOOLBENCH_DATA` (default `./data`):
 
@@ -47,9 +47,6 @@ classification). Files go under `$MLTOOLBENCH_DATA` (default `./data`):
 data/public/<task>/{train,test}.csv    # the only directory agents are told about
 data/private/<task>/answers.csv        # used by the grader only
 ```
-
-Already have the data from the paper's original scripts? Import it with
-`mltoolbench prepare --from-legacy old_data/`.
 
 **Leaderboards ship with the benchmark.** Each task's public Kaggle leaderboard is stored as
 `src/mltoolbench/tasks/<task>/leaderboard.csv`. It contains scores only, with no team names. All 15
@@ -63,7 +60,7 @@ the shipped files with `mltoolbench leaderboards --fetch` (Kaggle API) or `--fro
 ```bash
 mltoolbench run --config baselines/mcts_shaped.yaml --model gpt-4o --workers 8
 mltoolbench run --agent react --tasks spaceship_titanic --runs 3      # quick try
-mltoolbench report runs/                                              # paper-style table
+mltoolbench report runs/                                              # results table
 ```
 
 Each run's output lands in `runs/<model>/<agent>/<task>/run_<i>/`:
@@ -83,15 +80,7 @@ Each agent also gets a `summary.json` with per-task aggregates.
 | `baselines/hierarchical_mcts.yaml` | Stage-wise MCTS with tool masking |
 | `baselines/react_code.yaml` | Writes and executes Python instead of using tools (contrast baseline) |
 
-**Reproducing the paper.** The original code had bugs that affected search behavior, such as a UCT
-term that divided an average by the visit count twice. The baselines fix these by default.
-`baselines/paper/*.yaml` sets `profile: paper`, which restores the original behavior exactly, so the
-published numbers can be reproduced. Each divergence is a named flag, documented in
-`agents/mcts/config.py` and `agents/code_agent.py`. Two details of the original runs matter here:
-
-- The MCTS numbers came from the rollout implementation at rollout depth 0. Its 0.1 penalty is
-  applied per rollout level, so those runs had **no** per-step depth penalty.
-- The UCT exploration weight was 1.
+To reproduce the exact numbers reported in the paper, use the `paper-v1` release (`git checkout paper-v1`).
 
 Any OpenAI-compatible endpoint works, including vLLM, Azure and LiteLLM. Set `--base-url` or
 `OPENAI_BASE_URL`. Open models that emit tool calls as JSON text are handled.
@@ -140,13 +129,12 @@ stages and their tool masks are defined in `src/mltoolbench/tools/catalog.yaml`.
   normalized Gini. It's converted to the **percentile** of the public Kaggle leaderboard that the
   score beats.
 - For RMSLE tasks, negative predictions are clipped to 0 before scoring. The run stays valid, the
-  error still counts, and `result.json` records how many values were clipped. The paper's evaluation
-  skipped predictions below -1 instead; `grading: paper` in `baselines/paper/` reproduces that.
+  error still counts, and `result.json` records how many values were clipped.
 - Per task over N = 10 runs, **consistency** is the fraction of valid runs. The **median percentile**
   counts invalid runs as 0.
 - The headline number is the median across tasks.
 
-## Paper results (GPT-4o, 15 tasks, 10 runs each)
+## Results (GPT-4o, 15 tasks, 10 runs each)
 
 | Method | Consistency | Median percentile |
 |---|---|---|
@@ -156,8 +144,7 @@ stages and their tool masks are defined in `src/mltoolbench/tools/catalog.yaml`.
 | MCTS-Shaped | 0.8 | 9.36 |
 | Hierarchical MCTS | 0.7 | **17.10** |
 
-Per-task results and GPT-4.1-mini numbers are in the paper. The original evaluation outputs are
-archived in `results/v0/`.
+Per-task results and GPT-4.1-mini numbers are in the [paper](https://arxiv.org/abs/2512.00672).
 
 ## Repository layout
 
@@ -170,8 +157,7 @@ src/mltoolbench/
   agents/       Agent interface, ReAct, ReAct-Code, MCTS family (agents/mcts/)
   runner.py     parallel experiment runner
   cli.py        the `mltoolbench` command
-baselines/      experiment configs (baselines/paper/: exact reproduction)
-results/v0/     the paper's original evaluation outputs
+baselines/      experiment configs, one per baseline
 tests/          API-free tests; agents run end to end against a scripted LLM
 ```
 

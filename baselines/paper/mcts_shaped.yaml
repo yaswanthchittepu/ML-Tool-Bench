@@ -1,5 +1,0 @@
-# Reproduces the paper's runs (see agents/mcts/config.py for what profile: paper restores).
-agent: {name: mcts_shaped, profile: paper}
-grading: paper   # the paper's evaluation (see grading/grader.py)
-runs: 10
-tasks: [all]

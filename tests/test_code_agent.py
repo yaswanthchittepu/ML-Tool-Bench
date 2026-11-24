@@ -50,6 +50,3 @@ def test_execution_output_format_and_timeout(tmp_path):
     out = agent.execute("import time; time.sleep(10)", tmp_path / "c.py")
     assert "TimeoutError" in out
 
-
-def test_paper_profile_lifts_the_cap():
-    assert ReActCodeAgent(profile="paper").max_iterations == 125

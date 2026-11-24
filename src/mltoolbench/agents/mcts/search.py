@@ -18,21 +18,14 @@ from mltoolbench.agents.mcts.prompts import REFLECTION_JUDGE_SYSTEM
 from mltoolbench.agents.mcts.rewards import STAGES, Reflection, StageVerifier, Verdict
 
 
-class StepBudgetExceeded(RuntimeError):
-    """The paper's LangGraph runs hit their recursion limit (the run then produced nothing)."""
-
-
 @dataclass
 class Budget:
     limit: int
-    fail: bool
-    used: int = 1  # the graph's start node
+    used: int = 1  # the start step
 
     def take(self) -> bool:
-        """Account for one more graph step; False means stop gracefully."""
+        """Account for one more search step; False means stop and keep the best result."""
         if self.used >= self.limit:
-            if self.fail:
-                raise StepBudgetExceeded(f"step budget of {self.limit} exhausted")
             return False
         self.used += 1
         return True
@@ -41,8 +34,7 @@ class Budget:
 def select(root: Node, cfg: MCTSConfig) -> Node:
     node = root
     while node.children:
-        node = max(node.children, key=lambda c: c.uct(cfg.exploration_weight,
-                                                      average_value_twice=cfg.average_value_twice))
+        node = max(node.children, key=lambda c: c.uct(cfg.exploration_weight))
     return node
 
 
@@ -95,7 +87,7 @@ def flat_search(ctx, cfg: MCTSConfig, expander: Expander, *, verifier: StageVeri
     """LATS when ``judge`` is given, otherwise MCTS with verifiable ``verifier`` rewards."""
     lats = judge is not None
     root = Node([], stage_solved=None if lats else "init")
-    budget = Budget(cfg.step_budget, cfg.fail_on_step_budget)
+    budget = Budget(cfg.step_budget)
     expansions = 0
 
     def done() -> bool:
@@ -181,7 +173,7 @@ def _rollout_step(cfg, expander: Expander, messages, pad, rng) -> tuple[Candidat
 
 
 def _safe_rollout(run: Callable[..., float], fallback: float, *args: Any) -> float:
-    """A failed rollout falls back to the candidate's own reward (paper behaviour)."""
+    """A failed rollout falls back to the candidate's own reward."""
     try:
         return run(*args)
     except Exception:
@@ -199,10 +191,10 @@ class HierarchicalResult:
 def hierarchical_search(ctx, cfg: MCTSConfig, expanders: dict[str, Expander], verifier: StageVerifier,
                         rng: random.Random) -> HierarchicalResult:
     penalty = cfg.rollout_penalty * cfg.rollout_depth
-    root_reward = -penalty if cfg.penalize_roots else 0.0
+    root_reward = 0.0
     root = Node([], reward=root_reward)
     solutions: dict[str, list[Node]] = {s: [] for s in STAGES}
-    budget = Budget(cfg.step_budget, cfg.fail_on_step_budget)
+    budget = Budget(cfg.step_budget)
     expansions: dict[str, int] = {s: 0 for s in STAGES}
     reached = None
 
@@ -239,7 +231,7 @@ def _expand_stage(ctx, cfg, expander: Expander, verifier: StageVerifier, stage: 
         if use_rollout:
             reward = _safe_rollout(hierarchical_rollout, entry.reward, cfg, expander, verifier, stage, leaf, cand,
                                    entry, rng)
-        solved = reward > 0 if cfg.solved_from_rollout_reward else entry.solved
+        solved = entry.solved
         messages = cand.messages + ([entry.message()] if cfg.use_feedback else [])
         child = Node(messages, leaf, cand.delta, reward - penalty, solved=solved)
         if solved:
@@ -271,13 +263,11 @@ def _next_stage_root(cfg, stage: str, solutions: dict[str, list[Node]], root_rew
                      rng: random.Random) -> Node:
     """Seed the next stage's tree with copies of this stage's solutions (and the ancestors they need)."""
     root = Node([], reward=root_reward)
-    copy_penalty = penalty if cfg.penalize_roots else 0.0
-
     def copy(node: Node, parent: Node) -> Node:
-        return Node(node.messages, parent, node.scratchpad, node.reward - copy_penalty)
+        return Node(node.messages, parent, node.scratchpad, node.reward)
 
     def ancestor_below(node: Node, generations: int) -> Node:
-        """Walk up while ``generations`` ancestors exist (paper's parent.parent[.parent] loops)."""
+        """Walk up while ``generations`` ancestors exist."""
         def has(n: Node) -> bool:
             for _ in range(generations):
                 n = n.parent

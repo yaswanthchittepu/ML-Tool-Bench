@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mltoolbench.env import Kind, ToolUsageError, all_tools, execute, stage_names, tools_for_stage
+from mltoolbench.env import ToolUsageError, all_tools, execute, stage_names, tools_for_stage
 
 
 @pytest.fixture
@@ -84,16 +84,6 @@ def test_full_pipeline_fixed_output_keys(frames):
     assert 0.0 <= pad["best_cv_score"] <= 1.0
     step("predict_target", bindings={"model": "best_estimator", "X_data": "X_test"}, output="preds")
     assert len(pad["preds"]) == 10
-
-
-def test_binding_overrides_force_key(frames):
-    pad = {"X": pd.DataFrame({"a": [0.0, 1.0]}), "best_estimator": "FORCED", "other": "IGNORED"}
-    spec = all_tools()["predict_target"]
-    seen = {}
-    fake = type(spec)(spec.name, lambda model, X_data, **_: seen.setdefault("model", model) and None, Kind.GET_SET)
-    execute(fake, pad, bindings={"model": "other", "X_data": "X"}, output="p",
-            binding_overrides={"model": "best_estimator"})
-    assert seen["model"] == "FORCED"
 
 
 def test_tool_session_for_custom_agents(frames):

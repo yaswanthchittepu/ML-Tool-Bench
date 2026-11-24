@@ -10,7 +10,7 @@ from mltoolbench.agents.mcts.config import MCTSConfig
 from mltoolbench.agents.mcts.expansion import context_sizes
 from mltoolbench.agents.mcts.node import Node
 from mltoolbench.agents.mcts.rewards import StageVerifier, validate_submission_frame
-from mltoolbench.agents.mcts.search import Budget, StepBudgetExceeded
+from mltoolbench.agents.mcts.search import Budget
 
 # ------------------------------------------------------------------ nodes
 
@@ -24,13 +24,12 @@ def test_backprop_running_mean_and_path_state():
     assert b.trajectory_reward() == 1.0 and root.height == 3
 
 
-def test_uct_paper_divides_mean_by_visits_again():
+def test_uct_uses_mean_value():
     root = Node([])
     child = Node([], root, reward=1.0)
     Node([], child, reward=1.0)  # child: value 1.0 (mean), visits 2; root visits 3
     explore = math.sqrt(math.log(3) / 2)
     assert child.uct(1.0) == pytest.approx(1.0 + explore)
-    assert child.uct(1.0, average_value_twice=True) == pytest.approx(0.5 + explore)
 
 
 def test_mark_solved_ancestors():
@@ -92,18 +91,17 @@ def test_feature_target_checks(shaped):
     assert shaped.check("test_data_to_features", msgs, {"X_test": 1}, "").reward == 1
 
 
-@pytest.mark.parametrize("mode,legacy,tool,cv,expected", [
-    ("shaped", True, "tune_xgboost_classifier", 0.8, 2 + 2.5 * 0.8),
-    ("outcome", True, "tune_xgboost_classifier", 0.8, 2.5 * 0.8),
-    ("shaped", True, "tune_logistic_regressor", 0.5, 2 + 1.25),
-    ("shaped", True, "tune_linear_regressor", 0.5, 0.0),       # paper quirk: never rewarded
-    ("shaped", False, "tune_linear_regressor", 0.5, 2 + 1.25),  # fixed
-    ("shaped", True, "tune_xgboost_classifier", float("nan"), 2.0),
-    ("outcome", True, "tune_xgboost_classifier", float("nan"), 0.0),
-    ("hierarchical", True, "tune_xgboost_classifier", float("nan"), -98.0),
+@pytest.mark.parametrize("mode,tool,cv,expected", [
+    ("shaped", "tune_xgboost_classifier", 0.8, 2 + 2.5 * 0.8),
+    ("outcome", "tune_xgboost_classifier", 0.8, 2.5 * 0.8),
+    ("shaped", "tune_logistic_regressor", 0.5, 2 + 1.25),
+    ("shaped", "tune_linear_regressor", 0.5, 2 + 1.25),
+    ("shaped", "tune_xgboost_classifier", float("nan"), 2.0),
+    ("outcome", "tune_xgboost_classifier", float("nan"), 0.0),
+    ("hierarchical", "tune_xgboost_classifier", float("nan"), -98.0),
 ])
-def test_modeling_reward(mode, legacy, tool, cv, expected):
-    v = StageVerifier("binary-acc", mode, legacy_tuner_matching=legacy)
+def test_modeling_reward(mode, tool, cv, expected):
+    v = StageVerifier("binary-acc", mode)
     msgs = step(tool, {}, f"Applied {tool} with docstring ...")
     assert v.check("modeling", msgs, {"best_cv_score": np.float64(cv)}, "").reward == pytest.approx(expected)
 
@@ -121,7 +119,7 @@ def test_submission_check(shaped):
     (pd.DataFrame({"id": ["a", "b"], "y": [True, False]}), "binary-acc", True),
     (pd.DataFrame({"y": [0.2, 0.9]}), "binary-probs", True),
     (pd.DataFrame({"p0": [0.8, 0.1], "p1": [0.2, 0.9]}), "binary-probs", True),
-    (pd.DataFrame({"y": [0, 1]}), "binary-probs", False),            # np.int64 is not int: as in the paper
+    (pd.DataFrame({"y": [0, 1]}), "binary-probs", False),            # hard labels are not probabilities
     (pd.DataFrame({"y": [1.5, 2.5]}), "regression", True),
     (pd.DataFrame({"y": [0, 3, 5]}), "multiclass", True),
     (pd.DataFrame({"a": [0], "b": [1], "c": [1]}), "binary-acc", False),
@@ -130,25 +128,19 @@ def test_validate_submission_frame(df, problem, valid):
     assert validate_submission_frame(df, problem)[0] is valid
 
 
-def test_fe_feedback_text_profiles():
+def test_fe_rejects_exploding_column_count():
     wide = {"all": pd.DataFrame(np.zeros((1, 100001)))}
     msgs = step("one_hot_encode", {}, "Applied one_hot_encode")
-    assert "greater than 1000." in StageVerifier("binary-acc", legacy_feedback_text=True).check(
-        "feature_engineering", msgs, wide, "").feedback
-    assert "greater than 100000." in StageVerifier("binary-acc", legacy_feedback_text=False).check(
-        "feature_engineering", msgs, wide, "").feedback
+    verdict = StageVerifier("binary-acc").check("feature_engineering", msgs, wide, "")
+    assert verdict.reward == 0 and "greater than 100000." in verdict.feedback
 
 
 # ------------------------------------------------------------------ config / misc
 
-def test_profiles_set_flags_and_allow_overrides():
-    paper, fixed = MCTSConfig(profile="paper"), MCTSConfig()
-    assert paper.average_value_twice and not fixed.average_value_twice
-    assert MCTSConfig(profile="paper", average_value_twice=False).average_value_twice is False
+def test_config_overrides_and_rejects_unknown_options():
+    assert MCTSConfig.build({"max_depth": 30}, max_depth=10).max_depth == 10
     with pytest.raises(TypeError):
         MCTSConfig.build({}, not_a_knob=1)
-    with pytest.raises(ValueError):
-        MCTSConfig(profile="nope")
 
 
 def test_context_sizes_schedule():
@@ -158,9 +150,5 @@ def test_context_sizes_schedule():
 
 
 def test_budget():
-    b = Budget(limit=3, fail=False)
+    b = Budget(limit=3)
     assert b.take() and b.take() and not b.take()
-    with pytest.raises(StepBudgetExceeded):
-        strict = Budget(limit=2, fail=True)
-        strict.take()
-        strict.take()

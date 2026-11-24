@@ -3,16 +3,15 @@
 Instead of the 61 scratchpad tools, the model writes a complete Python solution,
 executes it, reads the output, and iterates until it calls ``mark_solution_complete``.
 
-Unlike the original (which ``exec``'d code inside the agent process), each solution
-runs in a fresh Python subprocess with a timeout, so a crash, hang or memory blowup
-in generated code fails that attempt instead of the whole benchmark run.
+Each solution runs in a fresh Python subprocess with a timeout, so a crash, hang or
+memory blowup in generated code fails that attempt instead of the whole benchmark run.
 """
 from __future__ import annotations
 
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
@@ -78,11 +77,8 @@ def mark_solution_complete() -> str:
 class ReActCodeAgent(Agent):
     name = "react_code"
 
-    def __init__(self, max_iterations: int | None = 10, timeout_s: float = 3600,
-                 profile: Literal["fixed", "paper"] = "fixed"):
-        """``profile="paper"``: the original never enforced ``max_iterations``; runs ended only at
-        LangGraph's recursion limit of 250 steps, i.e. at most 125 generate/execute rounds."""
-        self.max_iterations = 125 if profile == "paper" else max_iterations
+    def __init__(self, max_iterations: int | None = 10, timeout_s: float = 3600):
+        self.max_iterations = max_iterations
         self.timeout_s = timeout_s
 
     def run(self, ctx: RunContext) -> dict[str, Any]:
@@ -121,7 +117,7 @@ class ReActCodeAgent(Agent):
         return {"executions": executions, "successful_executions": successes, "marked_complete": completed}
 
     def execute(self, code: str, script: Path) -> str:
-        """Run a solution in a fresh interpreter; report in the original agent's format."""
+        """Run a solution in a fresh interpreter and report stdout, stderr and any error."""
         script.write_text(PREAMBLE + code)
         try:
             proc = subprocess.run([sys.executable, str(script)], capture_output=True, text=True,

@@ -22,7 +22,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("prepare", help="download and split competition data")
     p.add_argument("--tasks", nargs="+", default=["all"])
-    p.add_argument("--from-legacy", metavar="DIR", help="adopt data made by the paper's original scripts")
+    p.add_argument("--from-legacy", metavar="DIR", help="import already-split data from DIR/<task>/{train,test,test_with_labels}.csv")
     p.add_argument("--no-download", action="store_true", help="split already-downloaded raw/ files")
     p.add_argument("--force", action="store_true", help="rebuild even if prepared")
 
@@ -35,12 +35,12 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("run", help="run an agent on tasks and grade it")
     r.add_argument("--config", type=Path, help="YAML experiment file (see baselines/); flags override it")
     r.add_argument("--agent", help="registry name or package.module:Class")
-    r.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE", help="agent parameters, e.g. profile=paper")
+    r.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE", help="agent parameters, e.g. max_depth=30")
     r.add_argument("--tasks", nargs="+")
     r.add_argument("--model", help="model name (default: $OPENAI_MODEL)")
     r.add_argument("--base-url", help="OpenAI-compatible endpoint (default: $OPENAI_BASE_URL)")
     r.add_argument("--temperature", type=float)
-    r.add_argument("--runs", type=int, help="attempts per task (paper: 10)")
+    r.add_argument("--runs", type=int, help="attempts per task (default 10)")
     r.add_argument("--workers", type=int, help="parallel processes")
     r.add_argument("--out", type=Path, help="output directory (default: runs/<model>)")
     r.add_argument("-v", "--verbose", action="store_true")
@@ -48,7 +48,6 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("grade", help="grade one submission file")
     g.add_argument("task")
     g.add_argument("submission", type=Path)
-    g.add_argument("--profile", choices=["fixed", "paper"], default="fixed", help="paper: the paper's evaluation")
 
     rep = sub.add_parser("report", help="tabulate summary.json files under a runs directory")
     rep.add_argument("runs_dir", type=Path)
@@ -126,7 +125,6 @@ def cmd_run(args: argparse.Namespace) -> int:
         n_runs=args.runs or cfg.get("runs", 10),
         workers=args.workers or cfg.get("workers", 1),
         verbose=args.verbose,
-        grading=cfg.get("grading", "fixed"),
     )
     summary = run_experiment(exp)
     _print_table([{**row, "agent": exp.agent_name} for row in summary["per_task"]])
@@ -136,7 +134,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 def cmd_grade(args: argparse.Namespace) -> int:
     from mltoolbench.grading import grade_submission
 
-    print(json.dumps(grade_submission(get_task(args.task), args.submission, args.profile).to_dict(), indent=2))
+    print(json.dumps(grade_submission(get_task(args.task), args.submission).to_dict(), indent=2))
     return 0
 
 

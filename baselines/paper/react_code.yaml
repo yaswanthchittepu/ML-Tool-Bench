@@ -1,6 +1,0 @@
-# Reproduces the paper's ReAct-Code runs: the original never enforced max_iterations,
-# so runs were bounded only by the 125-round recursion limit.
-agent: {name: react_code, profile: paper}
-grading: paper   # the paper's evaluation (see grading/grader.py)
-runs: 10
-tasks: [all]

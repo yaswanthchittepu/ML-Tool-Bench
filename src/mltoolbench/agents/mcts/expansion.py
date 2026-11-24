@@ -1,5 +1,5 @@
 """Expansion: ask the LLM for tool calls, run each against a node's scratchpad, and
-turn every tool call into one candidate child (as the paper's scripts did)."""
+turn every tool call into one candidate child."""
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -34,18 +34,16 @@ class Candidate:
 
 class Expander:
     def __init__(self, ctx, system_prompt: str, *, bound: Sequence[ToolSpec], executable: Sequence[ToolSpec],
-                 parallel_calls: bool, reduce_context_on_error: bool, predict_with_best_estimator: bool,
-                 excluded: Sequence[str] = ()):
-        overrides = {"model": "best_estimator"} if predict_with_best_estimator else None
+                 parallel_calls: bool, reduce_context_on_error: bool, excluded: Sequence[str] = ()):
         self.question = ctx.prompt()
         self.reduce_context_on_error = reduce_context_on_error
-        model = bind_tools(ctx.chat_model(), langchain_tools(list(bound), overrides), ctx.llm,
+        model = bind_tools(ctx.chat_model(), langchain_tools(list(bound)), ctx.llm,
                            sequential=not parallel_calls)
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt), ("user", "{input}"), MessagesPlaceholder(variable_name="messages", optional=True),
         ])
         self.chain = prompt | model
-        self.tool_node = ToolNode(langchain_tools(list(executable), overrides))
+        self.tool_node = ToolNode(langchain_tools(list(executable)))
         # Feedback quotes the description of whatever tool was called, masked or not.
         self.docs = {name: s.description for name, s in all_tools().items() if name not in excluded}
 
@@ -83,7 +81,7 @@ class Expander:
 
 
 def context_sizes(n: int) -> list[int | None]:
-    """Full context first, then the last 10k, ..., 10, 5 and 1 messages (paper's retry schedule)."""
+    """Full context first, then the last 10k, ..., 10, 5 and 1 messages ."""
     if n <= 10:
         return [None, 5, 1]
     start = (n // 10) * 10

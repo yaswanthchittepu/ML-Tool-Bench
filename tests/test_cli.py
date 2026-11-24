@@ -43,5 +43,5 @@ def test_report_table(mini_task, tmp_path, capsys):
 
 
 def test_parse_sets():
-    assert _parse_sets(["profile=paper", "max_depth=50", "use_feedback=false"]) == {
-        "profile": "paper", "max_depth": 50, "use_feedback": False}
+    assert _parse_sets(["reward=shaped", "max_depth=50", "use_feedback=false"]) == {
+        "reward": "shaped", "max_depth": 50, "use_feedback": False}

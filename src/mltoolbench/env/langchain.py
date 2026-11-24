@@ -23,11 +23,11 @@ def merge_scratchpad(current: dict[str, Any] | None, update: dict[str, Any] | No
     return {**(current or {}), **(update or {})}
 
 
-def to_langchain_tool(spec: ToolSpec, binding_overrides: Mapping[str, str] | None = None) -> BaseTool:
+def to_langchain_tool(spec: ToolSpec) -> BaseTool:
     def run(state: Mapping[str, Any], tool_call_id: str, **call: Any) -> Command:
         calls = state.get("num_tool_calls", 0)
         result = execute(spec, state.get("scratchpad") or {}, call_index=calls,
-                         binding_overrides=binding_overrides, **call)
+                         **call)
         return Command(update={
             "num_tool_calls": calls + 1,
             "scratchpad": result.updates,
@@ -40,8 +40,8 @@ def to_langchain_tool(spec: ToolSpec, binding_overrides: Mapping[str, str] | Non
     return tool(wrapper)
 
 
-def langchain_tools(specs: list[ToolSpec], binding_overrides: Mapping[str, str] | None = None) -> list[BaseTool]:
-    return [to_langchain_tool(s, binding_overrides) for s in specs]
+def langchain_tools(specs: list[ToolSpec]) -> list[BaseTool]:
+    return [to_langchain_tool(s) for s in specs]
 
 
 # One explicit signature per kind: LangChain derives the JSON schema the LLM sees from it.

@@ -75,14 +75,10 @@ def execute(
     output: str | None = None,
     func_kwargs: Mapping[str, Any] | None = None,
     call_index: int = 0,
-    binding_overrides: Mapping[str, str] | None = None,
 ) -> ToolResult:
     """Run one tool call against ``scratchpad`` without mutating it.
 
-    ``call_index`` is the number of tool calls made so far; it is echoed in the message
-    (as in the paper's runs). ``binding_overrides`` forces a parameter to read a fixed
-    key regardless of the agent's binding (used by the paper's MCTS profile, which always
-    predicts with ``best_estimator``).
+    ``call_index`` is the number of tool calls made so far; it is echoed in the message.
 
     Exceptions raised by the underlying function propagate; adapters turn them into
     error messages for the agent.
@@ -92,9 +88,6 @@ def execute(
         raise ToolUsageError(f"{spec.name} overwrites its input, so it takes exactly one binding; got {bindings}")
 
     args = {param: scratchpad.get(key) for param, key in bindings.items()} if spec.kind.reads else {}
-    for param, key in (binding_overrides or {}).items():
-        if param in args:
-            args[param] = scratchpad.get(key)
     args.update(func_kwargs or {})
     result = spec.func(**args)
 
@@ -174,7 +167,7 @@ def tools_for_stage(stage: str | None = None) -> list[ToolSpec]:
 
 
 # --------------------------------------------------------------------------- descriptions
-# Verbatim from the paper's decorators: LLMs see these as part of each tool description.
+# LLMs see these as part of each tool description.
 
 _FUNC_KWARGS_DOC = """
         func_kwargs : dict

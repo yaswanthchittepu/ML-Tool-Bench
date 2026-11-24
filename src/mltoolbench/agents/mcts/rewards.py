@@ -1,11 +1,10 @@
 """Verifiable stage rewards (MCTS-Shaped / MCTS-Outcome / Hierarchical MCTS) and the
 LATS reflection judge's output model.
 
-One implementation replaces the five copies in the original (commit c8c36a8) ``cls.py`` /
-``cls_hierarchical.py``. Checks read the candidate's messages (``[AIMessage with
+Checks read the candidate's messages (``[AIMessage with
 one tool call, ToolMessage, ...]``) and the scratchpad *delta* its tool produced;
 they rely on the ``"Applied <tool>"`` message prefix and the fixed output keys of
-:mod:`mltoolbench.env.tools`. Feedback texts are verbatim from the paper's runs.
+:mod:`mltoolbench.env.tools`.
 """
 from __future__ import annotations
 
@@ -31,15 +30,13 @@ SHAPED_REWARDS = {
 OUTCOME_STAGES = ["modeling", "create_submission_dataframe"]
 OUTCOME_REWARDS = {"modeling": 0, "create_submission_dataframe": 2}
 CV_SCALE = 2.5
-_LEGACY_TUNERS = [f"tune_{m}_{t}" for m in ("catboost", "lightgbm", "logistic", "xgboost", "random_forest")
-                  for t in ("regressor", "classifier")]
 _NUMERIC_TYPES = ["int64", "int32", "float64", "float32", "int", "float"]
 
 ProblemType = Literal["binary-acc", "binary-probs", "regression", "multiclass"]
 
 
 def problem_type(task) -> ProblemType:
-    """The legacy problem-type label the submission check is keyed on."""
+    """The problem-type label the submission check is keyed on."""
     if task.task_type == "binary":
         return "binary-probs" if task.prediction == "probability" else "binary-acc"
     return task.task_type
@@ -67,12 +64,9 @@ class StageVerifier:
     the hierarchical script's feedback wording and a -100 bonus for a NaN CV score).
     """
 
-    def __init__(self, problem: ProblemType, mode: Literal["shaped", "outcome", "hierarchical"] = "shaped", *,
-                 legacy_tuner_matching: bool = True, legacy_feedback_text: bool = True):
+    def __init__(self, problem: ProblemType, mode: Literal["shaped", "outcome", "hierarchical"] = "shaped"):
         self.problem = problem
         self.mode = mode
-        self.legacy_tuner_matching = legacy_tuner_matching
-        self.legacy_feedback_text = legacy_feedback_text
         self.stages = OUTCOME_STAGES if mode == "outcome" else STAGES
         self.rewards = OUTCOME_REWARDS if mode == "outcome" else SHAPED_REWARDS
         self.nan_cv_bonus = {"shaped": 0.0, "outcome": 0.0, "hierarchical": -100.0}[mode]
@@ -158,10 +152,9 @@ class StageVerifier:
             assert len(delta) == 1, "The Scratchpad in the feature_engineering phase is expected to only have 1 item"
             df = next(iter(delta.values()))
             if len(df.columns) > 100000:
-                limit = "1000" if (self.legacy_feedback_text and self.mode != "hierarchical") else "100000"
-                return Verdict(stage, 0.0, f"Human Feedback: Verified that the feature engineering is incomplete and number "
-                               f"of columns is greater than {limit}. Issue is probably from encoding category columns "
-                               f"with high cardinality. Please consider dropping these columns instead of encoding them.")
+                return Verdict(stage, 0.0, "Human Feedback: Verified that the feature engineering is incomplete and number "
+                               "of columns is greater than 100000. Issue is probably from encoding category columns "
+                               "with high cardinality. Please consider dropping these columns instead of encoding them.")
             if all(str(df[c].dtype) in _NUMERIC_TYPES or pd.api.types.is_numeric_dtype(df[c]) for c in df.columns):
                 return Verdict(stage, self._r(stage), "Human Feedback: Verified that the feature engineering is complete "
                                "and all columns are numeric (int/float)")
@@ -216,10 +209,7 @@ class StageVerifier:
         pending = self._retry("Modeling is still in progress", doc, prefix="") if hier else "Modeling is still in progress"
         try:
             output = self._tool_output(msgs)
-            if self.legacy_tuner_matching:
-                tuned = any(f"Applied {name}" in output for name in _LEGACY_TUNERS)
-            else:
-                tuned = output.startswith("Applied tune_")
+            tuned = output.startswith("Applied tune_")
             if not tuned:
                 return Verdict(stage, 0.0, pending)
             bonus = 0.0

@@ -58,8 +58,8 @@ def split(df: pd.DataFrame, task: Task) -> tuple[pd.DataFrame, pd.DataFrame, pd.
 
 
 def import_legacy_layout(task: Task, legacy_root: str | Path) -> None:
-    """Adopt data produced by the paper's original scripts (``<root>/<task>/train.csv``,
-    ``test.csv``, ``test_with_labels.csv``) instead of re-downloading from Kaggle."""
+    """Adopt already-split data in the flat ``<root>/<task>/{train,test,test_with_labels}.csv``
+    layout instead of downloading from Kaggle."""
     src = Path(legacy_root) / task.id
     task.public_dir.mkdir(parents=True, exist_ok=True)
     task.private_dir.mkdir(parents=True, exist_ok=True)

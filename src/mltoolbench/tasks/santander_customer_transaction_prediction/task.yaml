@@ -1,7 +1,7 @@
 name: "Santander Customer Transaction Prediction"
 kaggle: santander-customer-transaction-prediction
 task_type: binary
-# Graded with AUC on hard labels, as in the paper (prediction: label).
+# Graded with AUC on hard 0/1 labels.
 prediction: label
 metric: auc
 target: target

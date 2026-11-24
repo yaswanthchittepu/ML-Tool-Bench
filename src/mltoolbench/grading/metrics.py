@@ -17,11 +17,6 @@ def rmsle(preds, labels) -> float:
     return float(np.sqrt(np.mean((np.log1p(preds) - np.log1p(labels)) ** 2)))
 
 
-def rmsle_paper(preds, labels) -> float:
-    """The paper's RMSLE: on pandas Series, rows with a prediction below -1 become NaN and are
-    silently skipped by the mean, and a prediction of exactly -1 gives inf."""
-    return float(np.sqrt(np.mean((np.log(preds + 1) - np.log(labels + 1)) ** 2)))
-
 
 def accuracy(preds, labels) -> float:
     return float((preds == labels).mean())

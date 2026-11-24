@@ -1,7 +1,6 @@
 """Tree-search baselines (LATS, MCTS-Outcome, MCTS-Shaped, Hierarchical MCTS).
 
-``profile="paper"`` reproduces the paper's runs; ``profile="fixed"`` (default)
-corrects their bugs. See :mod:`mltoolbench.agents.mcts.config` for every flag.
+All search settings live in :class:`mltoolbench.agents.mcts.config.MCTSConfig`.
 """
 from mltoolbench.agents.mcts.agents import (
     HierarchicalMCTSAgent,

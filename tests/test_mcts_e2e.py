@@ -36,10 +36,9 @@ def assert_valid_run(result):
 
 
 @pytest.mark.parametrize("name", ["mcts_shaped", "mcts_outcome"])
-@pytest.mark.parametrize("profile", ["paper", "fixed"])
-def test_flat_mcts_solves_pipeline(mini_task, tmp_path, name, profile):
+def test_flat_mcts_solves_pipeline(mini_task, tmp_path, name):
     run_dir = tmp_path / "run"
-    result = run_one({"name": name, "profile": profile}, mini_task.id, run_dir, scripted_config(mcts_pipeline(mini_task)))
+    result = run_one(name, mini_task.id, run_dir, scripted_config(mcts_pipeline(mini_task)))
     assert_valid_run(result)
     stats = result["agent_stats"]
     assert stats["framework_wrote_submission"] and stats["solved_nodes"] >= 1
@@ -49,7 +48,7 @@ def test_flat_mcts_solves_pipeline(mini_task, tmp_path, name, profile):
 def test_mcts_tool_errors_become_feedback(mini_task, tmp_path):
     script = [tool_call("read_data", output="x", func_kwargs={"filepath": "/does/not/exist.csv"})]
     model = scripted_config(script)
-    agent = build_agent({"name": "mcts_shaped", "max_depth": 2, "fail_on_step_budget": False})
+    agent = build_agent({"name": "mcts_shaped", "max_depth": 2})
     from mltoolbench.agents.base import RunContext
     ctx = RunContext(mini_task, tmp_path / "r", model)
     stats = agent.run(ctx)
@@ -83,19 +82,18 @@ def test_lats_uses_judge_and_agents_own_submission(mini_task, tmp_path):
             return tool_call("Reflection", reflections="ok", score=8 if final else 6, found_solution=final)
         return steps.pop(0)
 
-    result = run_one({"name": "lats", "profile": "paper"}, mini_task.id, run_dir, scripted_config(respond))
+    result = run_one("lats", mini_task.id, run_dir, scripted_config(respond))
     assert_valid_run(result)
     assert not result["agent_stats"]["framework_wrote_submission"]  # the solution node is the final text answer
     assert result["agent_stats"]["expansions"] == 13
 
 
-@pytest.mark.parametrize("profile", ["paper", "fixed"])
-def test_hierarchical_mcts_runs_all_stages(mini_task, tmp_path, profile):
+def test_hierarchical_mcts_runs_all_stages(mini_task, tmp_path):
     # Root height at each stage's start (copies carried over) + steps that stage needs.
     limits = {"train_data_loading": 2, "test_data_loading": 3, "combine_train_test": 4, "data_cleaning": 4,
               "feature_engineering": 4, "split_train_test": 3, "train_data_to_features_target": 3,
               "test_data_to_features": 4, "modeling": 4, "create_submission_dataframe": 4}
-    spec = {"name": "hierarchical_mcts", "profile": profile, "stage_depth_limits": limits}
+    spec = {"name": "hierarchical_mcts", "stage_depth_limits": limits}
     result = run_one(spec, mini_task.id, tmp_path / "run", scripted_config(mcts_pipeline(mini_task)))
     assert_valid_run(result)
     stats = result["agent_stats"]

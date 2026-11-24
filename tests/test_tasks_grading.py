@@ -121,13 +121,6 @@ def test_rmsle_clips_negative_predictions(rmsle_task):
     assert neg.metric > good.metric                  # so the bad prediction still costs
 
 
-def test_rmsle_paper_profile_skips_rows_below_minus_one(rmsle_task):
-    neg = grade_submission(rmsle_task, pd.DataFrame({"Calories": [11.0, -5.0, 31.0, 39.0]}), profile="paper")
-    other_rows = np.sqrt(np.mean((np.log1p([11.0, 31.0, 39.0]) - np.log1p([10.0, 30.0, 40.0])) ** 2))
-    assert neg.valid and neg.n_clipped == 0
-    assert neg.metric == pytest.approx(other_rows)  # the -5 row was silently left out of the mean
-
-
 def test_rmsle_minus_one_is_finite_by_default(rmsle_task):
     g = grade_submission(rmsle_task, pd.DataFrame({"Calories": [11.0, -1.0, 31.0, 39.0]}))
     assert np.isfinite(g.metric)

@@ -1,5 +1,0 @@
-# Reproduces the paper's ReAct runs (ReAct had no behavior changes in the port).
-agent: {name: react}
-grading: paper   # the paper's evaluation (see grading/grader.py)
-runs: 10
-tasks: [all]

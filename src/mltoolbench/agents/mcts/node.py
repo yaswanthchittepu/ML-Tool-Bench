@@ -52,15 +52,13 @@ class Node:
             node.value = (node.value * (node.visits - 1) + reward) / node.visits
             node = node.parent
 
-    def uct(self, exploration_weight: float, *, average_value_twice: bool = False) -> float:
-        """Upper confidence bound. ``value`` is already a mean; ``average_value_twice``
-        reproduces the paper's code, which divided it by ``visits`` again."""
+    def uct(self, exploration_weight: float) -> float:
+        """Upper confidence bound; ``value`` is the running mean reward of the subtree."""
         if self.parent is None:
             raise ValueError("The root has no UCT score")
         if self.visits == 0:
             return self.value
-        exploit = self.value / self.visits if average_value_twice else self.value
-        return exploit + exploration_weight * math.sqrt(math.log(self.parent.visits) / self.visits)
+        return self.value + exploration_weight * math.sqrt(math.log(self.parent.visits) / self.visits)
 
     # ------------------------------------------------------------- solved status
     @property
