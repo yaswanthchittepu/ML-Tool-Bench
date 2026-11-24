@@ -94,3 +94,19 @@ def test_binding_overrides_force_key(frames):
     execute(fake, pad, bindings={"model": "other", "X_data": "X"}, output="p",
             binding_overrides={"model": "best_estimator"})
     assert seen["model"] == "FORCED"
+
+
+def test_tool_session_for_custom_agents(frames):
+    from mltoolbench.env.session import ToolSession
+
+    session = ToolSession()
+    schemas = {t["function"]["name"]: t["function"] for t in session.openai_tools()}
+    assert len(schemas) == 61
+    assert schemas["read_data"]["parameters"]["required"] == ["output"]
+    assert set(schemas["fillna_with_median"]["parameters"]["properties"]) == {"bindings", "func_kwargs"}
+
+    msg = session.call("read_data", '{"output": "df", "func_kwargs": {"filepath": "%s"}}' % (frames / "train.csv"))
+    assert msg.startswith("Applied read_data") and "df" in session.scratchpad
+    assert session.call("read_data", {"output": "x", "func_kwargs": {"filepath": "/missing.csv"}}).startswith("Error")
+    assert session.call("nope", {}).startswith("Error: unknown tool")
+    assert ToolSession(stage="modeling").specs.keys() >= {"tune_xgboost_classifier"}
