@@ -44,14 +44,18 @@ class ModelConfig:
 
     @classmethod
     def from_env(cls, **overrides: Any) -> ModelConfig:
+        """Environment variables, with explicit ``overrides`` (e.g. ``--model``) taking precedence."""
         temperature = os.environ.get("TEMPERATURE")
-        return cls(**{
-            "model": os.environ["OPENAI_MODEL"],
+        values = {
+            "model": os.environ.get("OPENAI_MODEL"),
             "base_url": os.environ.get("OPENAI_BASE_URL"),
             "api_key": os.environ.get("OPENAI_API_KEY"),
             "temperature": float(temperature) if temperature else None,
             **overrides,
-        })
+        }
+        if not values["model"]:
+            raise ValueError("No model configured: pass --model or set OPENAI_MODEL")
+        return cls(**values)
 
     @property
     def supports_parallel_tool_calls_flag(self) -> bool:

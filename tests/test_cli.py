@@ -45,3 +45,25 @@ def test_report_table(mini_task, tmp_path, capsys):
 def test_parse_sets():
     assert _parse_sets(["reward=shaped", "max_depth=50", "use_feedback=false"]) == {
         "reward": "shaped", "max_depth": 50, "use_feedback": False}
+
+
+def test_model_flag_works_without_openai_model_env(monkeypatch):
+    from mltoolbench.llm import ModelConfig
+
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.setenv("TEMPERATURE", "0.3")
+    cfg = ModelConfig.from_env(model="gpt-4o-mini")
+    assert cfg.model == "gpt-4o-mini" and cfg.temperature == 0.3
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o")
+    assert ModelConfig.from_env(model="gpt-4o-mini").model == "gpt-4o-mini"  # the flag wins
+    assert ModelConfig.from_env().model == "gpt-4o"
+
+
+def test_missing_model_is_a_clear_cli_error(monkeypatch, capsys):
+    import pytest
+
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.setattr("mltoolbench.cli._load_dotenv", lambda: None)  # ignore any local .env
+    with pytest.raises(SystemExit) as exc:
+        main(["run", "--agent", "react", "--tasks", "spaceship_titanic", "--runs", "1"])
+    assert "pass --model or set OPENAI_MODEL" in str(exc.value)

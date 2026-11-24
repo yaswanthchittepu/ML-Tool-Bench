@@ -116,7 +116,10 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     model_cfg = {**cfg.get("model", {}), **{k: v for k, v in {
         "model": args.model, "base_url": args.base_url, "temperature": args.temperature}.items() if v is not None}}
-    llm = ModelConfig.from_env(**model_cfg)
+    try:
+        llm = ModelConfig.from_env(**model_cfg)
+    except ValueError as e:
+        sys.exit(f"error: {e}")
     exp = Experiment(
         agent=agent if len(agent) > 1 else agent["name"],
         tasks=_task_ids(args.tasks or cfg.get("tasks", ["all"])),
