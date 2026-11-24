@@ -32,7 +32,6 @@ def prepare_task(task: Task, *, download: bool = True, force: bool = False) -> N
         return
     if download:
         download_competition(task)
-        download_leaderboard(task)
     raw_train = _find_csv(task.raw_dir, "train.csv")
     train, test, answers = split(pd.read_csv(raw_train), task)
     task.public_dir.mkdir(parents=True, exist_ok=True)
@@ -58,7 +57,7 @@ def split(df: pd.DataFrame, task: Task) -> tuple[pd.DataFrame, pd.DataFrame, pd.
     return train, X_test, answers
 
 
-def import_legacy_layout(task: Task, legacy_root: str | Path, leaderboards: str | Path | None = None) -> None:
+def import_legacy_layout(task: Task, legacy_root: str | Path) -> None:
     """Adopt data produced by the paper's original scripts (``<root>/<task>/train.csv``,
     ``test.csv``, ``test_with_labels.csv``) instead of re-downloading from Kaggle."""
     src = Path(legacy_root) / task.id
@@ -68,8 +67,6 @@ def import_legacy_layout(task: Task, legacy_root: str | Path, leaderboards: str 
         shutil.copy(src / name, task.public_dir / name)
     labels = pd.read_csv(src / "test_with_labels.csv")
     labels[[task.id_column, task.target]].to_csv(task.private_dir / "answers.csv", index=False)
-    if leaderboards and (board := Path(leaderboards) / f"{task.id}.csv").exists():
-        shutil.copy(board, task.private_dir / "leaderboard.csv")
     print(f"[{task.id}] imported from {src}")
 
 
@@ -77,16 +74,6 @@ def download_competition(task: Task) -> None:
     task.raw_dir.mkdir(parents=True, exist_ok=True)
     _kaggle("competitions", "download", "-c", task.kaggle, "-p", str(task.raw_dir))
     _extract_all(task.raw_dir)
-
-
-def download_leaderboard(task: Task) -> None:
-    """Fetch the public leaderboard used to convert scores into percentiles."""
-    tmp = task.raw_dir / "leaderboard"
-    tmp.mkdir(parents=True, exist_ok=True)
-    _kaggle("competitions", "leaderboard", task.kaggle, "--download", "-p", str(tmp))
-    _extract_all(tmp)
-    task.private_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy(_find_csv(tmp, "*leaderboard*.csv"), task.private_dir / "leaderboard.csv")
 
 
 def _kaggle(*args: str) -> None:
