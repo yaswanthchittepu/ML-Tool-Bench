@@ -7,7 +7,10 @@ Data layout under the data root (``$MLTOOLBENCH_DATA`` or ``./data``)::
 
     raw/<task_id>/       Kaggle download (prepare step only)
     public/<task_id>/    train.csv, test.csv   <- the only directory agents see
-    private/<task_id>/   answers.csv, leaderboard.csv   <- grader only
+    private/<task_id>/   answers.csv           <- grader only
+
+Leaderboards ship with the package (``tasks/<task_id>/leaderboard.csv``, scores
+only); a ``private/<task_id>/leaderboard.csv`` overrides the shipped one.
 """
 from __future__ import annotations
 
@@ -54,6 +57,14 @@ class Task:
     @property
     def raw_dir(self) -> Path:
         return data_root() / "raw" / self.id
+
+    @property
+    def leaderboard_path(self) -> Path | None:
+        """The leaderboard used for percentiles: a local override, else the shipped one."""
+        for path in (self.private_dir / "leaderboard.csv", TASKS_DIR / self.id / "leaderboard.csv"):
+            if path.exists():
+                return path
+        return None
 
     def prompt(self, submission_dir: str | Path, submission_file: str, model_dir: str | Path) -> str:
         """The task description an agent receives, with paths filled in."""

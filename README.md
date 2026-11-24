@@ -39,17 +39,24 @@ The datasets are not redistributed. You need a [Kaggle API token](https://www.ka
 mltoolbench prepare                        # all 15 tasks; or --tasks spaceship_titanic ...
 ```
 
-This downloads each competition and its public leaderboard, then makes the paper's split
-deterministically: up to 10,000 rows sampled with seed 42, classification targets label-encoded, and
-20% held out (stratified for classification). Files go under `$MLTOOLBENCH_DATA` (default `./data`):
+This downloads each competition and makes the paper's split deterministically: up to 10,000 rows
+sampled with seed 42, classification targets label-encoded, and 20% held out (stratified for
+classification). Files go under `$MLTOOLBENCH_DATA` (default `./data`):
 
 ```
-data/public/<task>/{train,test}.csv            # the only directory agents are told about
-data/private/<task>/{answers,leaderboard}.csv  # used by the grader only
+data/public/<task>/{train,test}.csv    # the only directory agents are told about
+data/private/<task>/answers.csv        # used by the grader only
 ```
 
 Already have the data from the paper's original scripts? Import it with
-`mltoolbench prepare --from-legacy old_data/ --leaderboards old_leaderboards/`.
+`mltoolbench prepare --from-legacy old_data/`.
+
+**Leaderboards ship with the benchmark.** Each task's public Kaggle leaderboard is stored as
+`src/mltoolbench/tasks/<task>/leaderboard.csv`. It contains scores only, with no team names. All 15
+competitions are closed, so these leaderboards are frozen, and percentiles need no Kaggle access.
+To use a different leaderboard, put it at `data/private/<task>/leaderboard.csv`. Maintainers rebuild
+the shipped files with `mltoolbench leaderboards --fetch` (Kaggle API) or `--from DIR`
+(existing `<task>.csv` exports).
 
 ## Run a baseline
 

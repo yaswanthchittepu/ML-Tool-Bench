@@ -23,9 +23,14 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("prepare", help="download and split competition data")
     p.add_argument("--tasks", nargs="+", default=["all"])
     p.add_argument("--from-legacy", metavar="DIR", help="adopt data made by the paper's original scripts")
-    p.add_argument("--leaderboards", metavar="DIR", help="with --from-legacy: directory of <task>.csv leaderboards")
     p.add_argument("--no-download", action="store_true", help="split already-downloaded raw/ files")
     p.add_argument("--force", action="store_true", help="rebuild even if prepared")
+
+    lb = sub.add_parser("leaderboards", help="(maintainers) rebuild the shipped leaderboards")
+    lb.add_argument("--tasks", nargs="+", default=["all"])
+    src = lb.add_mutually_exclusive_group(required=True)
+    src.add_argument("--fetch", action="store_true", help="download public leaderboards via the Kaggle API")
+    src.add_argument("--from", dest="from_dir", type=Path, metavar="DIR", help="import <task_id>.csv exports")
 
     r = sub.add_parser("run", help="run an agent on tasks and grade it")
     r.add_argument("--config", type=Path, help="YAML experiment file (see baselines/); flags override it")
@@ -49,8 +54,8 @@ def main(argv: list[str] | None = None) -> int:
     rep.add_argument("--csv", type=Path, help="also write the long-format table here")
 
     args = parser.parse_args(argv)
-    return {"list": cmd_list, "prepare": cmd_prepare, "run": cmd_run, "grade": cmd_grade,
-            "report": cmd_report}[args.command](args)
+    return {"list": cmd_list, "prepare": cmd_prepare, "leaderboards": cmd_leaderboards, "run": cmd_run,
+            "grade": cmd_grade, "report": cmd_report}[args.command](args)
 
 
 def cmd_list(_: argparse.Namespace) -> int:
@@ -70,10 +75,30 @@ def cmd_prepare(args: argparse.Namespace) -> int:
 
     for task in map(get_task, _task_ids(args.tasks)):
         if args.from_legacy:
-            import_legacy_layout(task, args.from_legacy, args.leaderboards)
+            import_legacy_layout(task, args.from_legacy)
         else:
             prepare_task(task, download=not args.no_download, force=args.force)
     return 0
+
+
+def cmd_leaderboards(args: argparse.Namespace) -> int:
+    from mltoolbench.tasks.leaderboards import fetch_leaderboard, write_leaderboard
+
+    failed = []
+    for task in map(get_task, _task_ids(args.tasks)):
+        try:
+            if args.fetch:
+                n = fetch_leaderboard(task)
+            else:
+                source = args.from_dir / f"{task.id}.csv"
+                if not source.exists():
+                    raise FileNotFoundError(source)
+                n = write_leaderboard(task, source)
+            print(f"[{task.id}] {n} leaderboard entries")
+        except Exception as e:  # report every task, then fail
+            failed.append(task.id)
+            print(f"[{task.id}] FAILED: {e}")
+    return 1 if failed else 0
 
 
 def cmd_run(args: argparse.Namespace) -> int:

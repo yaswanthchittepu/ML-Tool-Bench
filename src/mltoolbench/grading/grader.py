@@ -61,8 +61,8 @@ def grade_submission(task: Task, submission: str | Path | pd.DataFrame) -> Grade
 
 
 def leaderboard_percentile(task: Task, score: float) -> float | None:
-    path = task.private_dir / "leaderboard.csv"
-    if not path.exists():
+    path = task.leaderboard_path
+    if path is None:
         return None
     board = pd.read_csv(path)["Score"].dropna().to_numpy()
     beaten = board >= score if task.metric in LOWER_IS_BETTER else board <= score
