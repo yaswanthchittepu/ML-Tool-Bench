@@ -41,7 +41,8 @@ class Experiment:
 
     @property
     def agent_name(self) -> str:
-        return self.agent if isinstance(self.agent, str) else self.agent["name"]
+        """The agent's ``name`` attribute (``my_pkg.mod:MyAgent`` -> ``"my_agent"``)."""
+        return build_agent(self.agent).name
 
 
 def run_one(agent_spec: str | dict[str, Any], task_id: str, run_dir: Path, llm: ModelConfig | None,
@@ -78,7 +79,7 @@ def run_one(agent_spec: str | dict[str, Any], task_id: str, run_dir: Path, llm: 
 
 
 def run_experiment(exp: Experiment) -> dict[str, Any]:
-    root = Path(exp.out_dir) / exp.agent_name
+    root = Path(exp.out_dir) / exp.agent_name  # building the agent here fails fast on a bad spec
     jobs = [(t, i) for t in exp.tasks for i in range(exp.n_runs)]
     results: list[dict[str, Any]] = []
 
@@ -97,6 +98,7 @@ def run_experiment(exp: Experiment) -> dict[str, Any]:
                 _report(results[-1])
 
     summary = summarize(results, exp.n_runs)
+    summary["agent_name"] = root.name
     summary["config"] = {"agent": exp.agent, "model": _public_model_config(exp.llm), "n_runs": exp.n_runs,
                          "tasks": exp.tasks, **exp.extra}
     _write_json(root / "summary.json", summary)
