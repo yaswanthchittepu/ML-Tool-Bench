@@ -1,0 +1,3 @@
+agent: {name: mcts_outcome}
+runs: 10
+tasks: [all]

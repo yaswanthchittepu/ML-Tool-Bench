@@ -1,0 +1,3 @@
+agent: {name: hierarchical_mcts}
+runs: 10
+tasks: [all]
