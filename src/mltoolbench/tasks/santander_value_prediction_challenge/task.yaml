@@ -1,0 +1,7 @@
+name: "Santander Value Prediction Challenge"
+kaggle: santander-value-prediction-challenge
+task_type: regression
+prediction: value
+metric: rmsle
+target: target
+id_column: ID

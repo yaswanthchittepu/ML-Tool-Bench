@@ -1,0 +1,7 @@
+name: "Regression of Used Car Prices"
+kaggle: playground-series-s4e9
+task_type: regression
+prediction: value
+metric: rmse
+target: price
+id_column: id

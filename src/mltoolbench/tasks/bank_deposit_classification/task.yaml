@@ -1,0 +1,7 @@
+name: "Binary Classification with a Bank Dataset"
+kaggle: playground-series-s5e8
+task_type: binary
+prediction: probability
+metric: auc
+target: y
+id_column: id

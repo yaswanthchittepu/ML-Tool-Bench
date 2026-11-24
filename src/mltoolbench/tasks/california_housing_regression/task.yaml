@@ -1,0 +1,7 @@
+name: "Regression with a Tabular California Housing Dataset"
+kaggle: playground-series-s3e1
+task_type: regression
+prediction: value
+metric: rmse
+target: MedHouseVal
+id_column: id
