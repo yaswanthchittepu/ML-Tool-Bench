@@ -6,7 +6,7 @@ from typing import Any
 
 from mltoolbench.agents.base import Agent
 
-#: Baselines reported in the paper, then extras.
+#: The baselines reported in the paper.
 AGENTS: dict[str, str] = {
     "react": "mltoolbench.agents.react:ReActAgent",
     "lats": "mltoolbench.agents.mcts:LATSAgent",
@@ -14,8 +14,6 @@ AGENTS: dict[str, str] = {
     "mcts_shaped": "mltoolbench.agents.mcts:MCTSShapedAgent",
     "hierarchical_mcts": "mltoolbench.agents.mcts:HierarchicalMCTSAgent",
     "react_code": "mltoolbench.agents.code_agent:ReActCodeAgent",
-    # not in the paper
-    "hierarchical_react": "mltoolbench.agents.react:HierarchicalReActAgent",
 }
 
 

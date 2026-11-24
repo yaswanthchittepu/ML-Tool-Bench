@@ -65,24 +65,6 @@ def test_agent_crash_is_a_failed_run(mini_task, tmp_path):
     assert (tmp_path / "r" / "result.json").exists()
 
 
-def test_hierarchical_react_walks_all_stages(mini_task, tmp_path):
-    run_dir = tmp_path / "run"
-    calls = pipeline_calls(mini_task, run_dir / "submission.csv")
-    per_stage = [calls[0:1], calls[1:2], calls[2:3], calls[3:4], calls[4:6], calls[6:7], calls[7:8], calls[8:9],
-                 calls[9:10], calls[10:12]]
-    script = []
-    for stage_calls in per_stage:  # plan, tool calls, then "done" ends the stage
-        script += [AIMessage(content="plan"), *stage_calls, AIMessage(content="stage done")]
-    result = run_one("hierarchical_react", mini_task.id, run_dir, scripted_config(script))
-
-    assert result["error"] is None and result["agent_stats"]["stopped"] is None
-    assert result["grade"]["valid"], result["grade"]
-    steps = json.loads((run_dir / "trajectory.json").read_text())["steps"]
-    assert sum(s["type"] == "stage_transition" for s in steps) == 9
-    assert all(s["status"] == "success" for s in steps if s["type"] == "tool"), \
-        [s["content"] for s in steps if s["type"] == "tool" and s["status"] != "success"]
-
-
 def test_experiment_summary(mini_task, tmp_path):
     def script(messages, _tools):
         return AIMessage(content="no tools")
