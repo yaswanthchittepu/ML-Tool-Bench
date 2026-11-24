@@ -48,6 +48,7 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("grade", help="grade one submission file")
     g.add_argument("task")
     g.add_argument("submission", type=Path)
+    g.add_argument("--profile", choices=["fixed", "paper"], default="fixed", help="paper: the paper's evaluation")
 
     rep = sub.add_parser("report", help="tabulate summary.json files under a runs directory")
     rep.add_argument("runs_dir", type=Path)
@@ -125,6 +126,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         n_runs=args.runs or cfg.get("runs", 10),
         workers=args.workers or cfg.get("workers", 1),
         verbose=args.verbose,
+        grading=cfg.get("grading", "fixed"),
     )
     summary = run_experiment(exp)
     _print_table([{**row, "agent": exp.agent_name} for row in summary["per_task"]])
@@ -134,7 +136,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 def cmd_grade(args: argparse.Namespace) -> int:
     from mltoolbench.grading import grade_submission
 
-    print(json.dumps(grade_submission(get_task(args.task), args.submission).to_dict(), indent=2))
+    print(json.dumps(grade_submission(get_task(args.task), args.submission, args.profile).to_dict(), indent=2))
     return 0
 
 

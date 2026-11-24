@@ -11,7 +11,9 @@ the rules below (identical to the paper's evaluation):
   if several, ``prob_class_1.0`` or ``prob_class_1``.
 
 A run is *valid* if its submission exists, has the right row count, a prediction
-column can be located and it holds no NaN/inf. Each task reports, over N runs
+column can be located and it holds no NaN/inf. For RMSLE, negative predictions are
+clipped to 0 before scoring (counted in ``Grade.n_clipped``); ``profile="paper"``
+instead reproduces the paper's evaluation, which silently skipped those rows. Each task reports, over N runs
 (paper: 10), the *consistency* (valid / N) and the median metric and median
 leaderboard percentile, counting invalid or missing runs as the worst score.
 """
@@ -19,11 +21,12 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 
-from mltoolbench.grading.metrics import LOWER_IS_BETTER, METRICS
+from mltoolbench.grading.metrics import LOWER_IS_BETTER, METRICS, rmsle_paper
 from mltoolbench.tasks import Task
 
 WORST_LOWER_IS_BETTER = 1e8  # stand-in metric for invalid runs, as in the paper
@@ -36,6 +39,7 @@ class Grade:
     metric: float | None = None
     percentile: float | None = None  # % of leaderboard entries this score beats or ties
     reason: str | None = None
+    n_clipped: int = 0  # RMSLE predictions below 0 that were clipped to 0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -45,7 +49,8 @@ class InvalidSubmission(ValueError):
     pass
 
 
-def grade_submission(task: Task, submission: str | Path | pd.DataFrame) -> Grade:
+def grade_submission(task: Task, submission: str | Path | pd.DataFrame,
+                     profile: Literal["fixed", "paper"] = "fixed") -> Grade:
     answers = pd.read_csv(task.private_dir / "answers.csv")[task.target]
     try:
         df = submission if isinstance(submission, pd.DataFrame) else _read(submission)
@@ -54,10 +59,18 @@ def grade_submission(task: Task, submission: str | Path | pd.DataFrame) -> Grade
         preds = df[find_prediction_column(df, task.prediction)]
         if preds.isna().any() or (pd.api.types.is_numeric_dtype(preds) and np.isinf(preds).any()):
             raise InvalidSubmission("predictions contain NaN or inf")
-        score = METRICS[task.metric](preds, answers)
+        n_clipped = 0
+        if task.metric == "rmsle" and profile == "paper":
+            score = rmsle_paper(preds, answers)
+        else:
+            if task.metric == "rmsle":
+                n_clipped = int((preds < 0).sum())
+                preds = preds.clip(lower=0)
+            score = METRICS[task.metric](preds, answers)
     except InvalidSubmission as e:
         return Grade(task.id, valid=False, reason=str(e))
-    return Grade(task.id, valid=True, metric=score, percentile=leaderboard_percentile(task, score))
+    return Grade(task.id, valid=True, metric=score, percentile=leaderboard_percentile(task, score),
+                 n_clipped=n_clipped)
 
 
 def leaderboard_percentile(task: Task, score: float) -> float | None:

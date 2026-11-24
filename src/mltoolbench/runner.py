@@ -37,6 +37,8 @@ class Experiment:
     n_runs: int = 10
     workers: int = 1
     verbose: bool = False
+    #: "paper" reproduces the paper's evaluation quirks (see grading/grader.py).
+    grading: str = "fixed"
     extra: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -46,7 +48,7 @@ class Experiment:
 
 
 def run_one(agent_spec: str | dict[str, Any], task_id: str, run_dir: Path, llm: ModelConfig | None,
-            run_index: int = 0, verbose: bool = False) -> dict[str, Any]:
+            run_index: int = 0, verbose: bool = False, grading: str = "fixed") -> dict[str, Any]:
     """One attempt: build the agent, run it, save the trajectory, grade the submission."""
     task = get_task(task_id)
     ctx = RunContext(task, run_dir, llm, run_id=f"run_{run_index}", seed=run_index, verbose=verbose)
@@ -59,7 +61,7 @@ def run_one(agent_spec: str | dict[str, Any], task_id: str, run_dir: Path, llm: 
         ctx.log("error", traceback=error)
     elapsed = time.time() - started
 
-    grade = grade_submission(task, ctx.submission_path) if (task.private_dir / "answers.csv").exists() \
+    grade = grade_submission(task, ctx.submission_path, profile=grading) if (task.private_dir / "answers.csv").exists() \
         else Grade(task.id, valid=False, reason="no answers.csv: run `mltoolbench prepare` first")
     result = {
         "task_id": task.id,
@@ -84,7 +86,7 @@ def run_experiment(exp: Experiment) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
 
     def job_args(task_id: str, i: int):
-        return exp.agent, task_id, root / task_id / f"run_{i}", exp.llm, i, exp.verbose
+        return exp.agent, task_id, root / task_id / f"run_{i}", exp.llm, i, exp.verbose, exp.grading
 
     if exp.workers <= 1:
         for t, i in jobs:
@@ -100,7 +102,7 @@ def run_experiment(exp: Experiment) -> dict[str, Any]:
     summary = summarize(results, exp.n_runs)
     summary["agent_name"] = root.name
     summary["config"] = {"agent": exp.agent, "model": _public_model_config(exp.llm), "n_runs": exp.n_runs,
-                         "tasks": exp.tasks, **exp.extra}
+                         "tasks": exp.tasks, "grading": exp.grading, **exp.extra}
     _write_json(root / "summary.json", summary)
     return summary
 
