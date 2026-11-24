@@ -1,0 +1,4 @@
+# Reproduces the paper's ReAct runs (ReAct had no behavior changes in the port).
+agent: {name: react}
+runs: 10
+tasks: [all]
