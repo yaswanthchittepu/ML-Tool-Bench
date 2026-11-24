@@ -49,8 +49,11 @@ data/private/<task>/answers.csv        # used by the grader only
 ```
 
 **Leaderboards ship with the benchmark.** Each task's public Kaggle leaderboard is stored as
-`src/mltoolbench/tasks/<task>/leaderboard.csv`. It contains scores only, with no team names. All 15
-competitions are closed, so these leaderboards are frozen, and percentiles need no Kaggle access.
+`src/mltoolbench/tasks/<task>/leaderboard.csv`. It contains scores only, with no team names, so
+percentiles need no Kaggle access. The files are a snapshot taken on 2026-11-24. Fourteen of the
+competitions are closed, so their leaderboards no longer change. Spaceship Titanic is an ongoing
+"Getting Started" competition, so its live leaderboard keeps moving; the benchmark always uses the
+snapshot.
 To use a different leaderboard, put it at `data/private/<task>/leaderboard.csv`. Maintainers rebuild
 the shipped files with `mltoolbench leaderboards --fetch` (Kaggle API) or `--from DIR`
 (existing `<task>.csv` exports).

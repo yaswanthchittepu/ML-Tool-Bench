@@ -1,8 +1,9 @@
 """Kaggle leaderboards shipped with the benchmark, for ranking scores as percentiles.
 
 Each task's public leaderboard is stored in ``tasks/<task_id>/leaderboard.csv``,
-reduced to a single ``Score`` column (no team names or user ids). All 15
-competitions are closed, so their leaderboards are frozen.
+reduced to a single ``Score`` column (no team names or user ids). The shipped files
+are a snapshot from 2026-11-24 (Spaceship Titanic's live leaderboard keeps rolling;
+the other 14 competitions are closed).
 
 Maintainers (re)build them with ``mltoolbench leaderboards --fetch`` (Kaggle API)
 or ``mltoolbench leaderboards --from DIR`` (existing ``<task_id>.csv`` exports).
