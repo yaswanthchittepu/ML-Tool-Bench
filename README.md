@@ -19,7 +19,7 @@ knowledge.
 ## Install
 
 ```bash
-git clone <repo-url> && cd ml-tool-bench
+git clone https://github.com/yaswanthchittepu/ML-Tool-Bench.git && cd ML-Tool-Bench
 pip install -e ".[agents,prepare]"      # Python >= 3.11
 cp .env.example .env                    # set OPENAI_MODEL and OPENAI_API_KEY
 ```
