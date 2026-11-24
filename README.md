@@ -163,6 +163,11 @@ tests/          API-free tests; agents run end to end against a scripted LLM
 
 Run the tests with `pip install -e ".[agents,dev]" && pytest`.
 
+## License
+
+Code is released under the [MIT License](LICENSE). The Kaggle datasets are not redistributed; they are
+downloaded under each competition's own terms.
+
 ## Citation
 
 ```bibtex

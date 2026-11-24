@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "ML-Tool-Bench: a benchmark for tool-augmented planning on tabular ML tasks"
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
 authors = [{ name = "Yaswanth Chittepu" }]
 keywords = ["benchmark", "llm-agents", "tool-use", "planning", "mcts", "tabular", "kaggle"]
 classifiers = [
