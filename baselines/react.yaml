@@ -1,0 +1,4 @@
+# ReAct (paper baseline): plan once, then one tool call per turn.
+agent: {name: react}
+runs: 10
+tasks: [all]

@@ -1,0 +1,4 @@
+# Hierarchical ReAct (extra baseline, not in the paper): staged ReAct with tool masking.
+agent: {name: hierarchical_react}
+runs: 10
+tasks: [all]

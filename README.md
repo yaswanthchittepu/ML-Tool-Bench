@@ -1,184 +1,175 @@
-# Tabular Data Science Agent
+# ML-Tool-Bench
 
-A prototype Data Science Agent, that is able to solve Tabular Kaggle Data Science challenges, creating a trained model and a submission file for the test data, to be used for evaluation purposes. There are five different Data Science agent variants: ReACT, Hierarchical ReACT, Language Agent Tree Search (LATS), MCTS with outcome rewards, MCTS with hierarchical verifiable rewards, and Hierarchical MCTS + Verifiable rewards. 
+**A benchmark for tool-augmented planning on tabular ML tasks.**
+Paper: [ML-Tool-Bench: Tool-Augmented Planning for ML Tasks](https://arxiv.org/abs/2512.00672)
 
-## 🚀 Features
+Agents solve 15 Kaggle challenges end to end (load, clean, engineer features, model and submit) using
+**61 ML tools** instead of writing code. Data never passes through the LLM. Every dataframe and
+model lives in a *scratchpad* (a named-object store), and tools read and write it by name. Solving a
+task takes dozens of correctly chained tool calls, so this tests long-horizon planning more than ML
+knowledge.
 
-- **Hierarchical Agents**: Multi-stage ML pipeline automation with stage-specific tool restriction. Implemented for both ReACT and MCTS style approaches
-- **MCTS Implementation**: Implementations of MCTS search variants for improved agent decision making, in LangChain
-- **Function-to-Tool Conversion**: Decorators to automatically convert of arbitrary ML functions to LangChain tool format
-- **Comprehensive ML Toolkit**: Reasonably comprehensive tools to perform Feature engineering, modeling, evaluation, hyperparameter tuning, data loading and other utility tasks
+| | |
+|---|---|
+| **Tasks** | 15 Kaggle competitions: 7 regression, 6 binary, 2 multiclass. Each uses a 10k-row sample with 20% held out. |
+| **Action space** | 61 tools in 6 groups: io, cleaning, features, dataframe, tuning, evaluation |
+| **Score** | Kaggle leaderboard percentile (median over 10 runs) and consistency (fraction of runs with a valid submission) |
+| **Baselines** | ReAct, LATS, MCTS-Outcome, MCTS-Shaped, Hierarchical MCTS, ReAct-Code (plus Hierarchical ReAct) |
 
-## 🛠 Installation
+## Install
 
-1. **Clone the repository:**
-   ```bash
-   git clone -b mcts https://github.com/Research-Adobe/tabular-datascience-agent.git
-   ```
+```bash
+git clone <repo-url> && cd ml-tool-bench
+pip install -e ".[agents,prepare]"      # Python >= 3.11
+cp .env.example .env                    # set OPENAI_MODEL and OPENAI_API_KEY
+```
 
-2. **Create a conda env and Install dependencies:**
-   ```bash
-   conda create --name ds_agent python=3.11
-   conda activate ds_agent
-   pip install -r requirements.txt
-   ```
+- macOS: xgboost and LightGBM need OpenMP. Install it with `brew install libomp`.
+- The ML stack (pandas, scikit-learn, xgboost, LightGBM, CatBoost) is pinned to the paper's versions.
+  CV scores feed the MCTS rewards, so results are only comparable on these versions.
+- `pip install -e .` alone installs only the tools, environment and grader. That's enough to evaluate
+  your own agent.
 
-3. **Set up environment variables:**
-   Create a `.env` file with your API keys:
-   ```env
-    LANGSMITH_TRACING=false
-    LANGSMITH_ENDPOINT=<>
-    LANGSMITH_API_KEY=<>
-    LANGSMITH_PROJECT=<>
-    OPENAI_MODEL=gpt-4o
-    OPENAI_BASE_URL=<>
-    OPENAI_API_KEY=<>
-    MCTS_OUTCOME_REWARD=False
-    USE_FEEDBACK=True
-    COMPETITION_NAME=customer_churn_prediction
-   ```
-    MCTS_OUTCOME_REWARD is a flag for if you want to use outcome based rewards with MCTS. Only relevant for MCTS
+## Prepare the data
 
-    USE_FEEDBACK is a flag for if you want to use textual feedback or not. Only relevant for MCTS and Hierarchical MCTS
-    
-    COMPETITION_NAME is the name of the competition that has been provided in the challenges.py folder
+The datasets are not redistributed. You need a [Kaggle API token](https://www.kaggle.com/docs/api) in
+`~/.kaggle/kaggle.json`, and you must accept each competition's rules on kaggle.com. Then run:
 
+```bash
+mltoolbench prepare                        # all 15 tasks; or --tasks spaceship_titanic ...
+```
 
-## 🚀 Quick Start
+This downloads each competition and its public leaderboard, then makes the paper's split
+deterministically: up to 10,000 rows sampled with seed 42, classification targets label-encoded, and
+20% held out (stratified for classification). Files go under `$MLTOOLBENCH_DATA` (default `./data`):
 
-First add your competition information to the challenges.py file and set the COMPETITION_NAME to be the corresponding key, in the .env file
+```
+data/public/<task>/{train,test}.csv            # the only directory agents are told about
+data/private/<task>/{answers,leaderboard}.csv  # used by the grader only
+```
 
+Already have the data from the paper's original scripts? Import it with
+`mltoolbench prepare --from-legacy old_data/ --leaderboards old_leaderboards/`.
+
+## Run a baseline
+
+```bash
+mltoolbench run --config baselines/mcts_shaped.yaml --model gpt-4o --workers 8
+mltoolbench run --agent react --tasks spaceship_titanic --runs 3      # quick try
+mltoolbench report runs/                                              # paper-style table
+```
+
+Each run's output lands in `runs/<model>/<agent>/<task>/run_<i>/`:
+
+- `submission.csv`
+- `trajectory.json`: every LLM step and tool call
+- `result.json`: grade, tokens, cost and wall time
+
+Each agent also gets a `summary.json` with per-task aggregates.
+
+| Config | Agent | In paper |
+|---|---|---|
+| `baselines/react.yaml` | ReAct: plan, then one tool call per turn | yes |
+| `baselines/lats.yaml` | LATS: MCTS with an LLM-reflection value | yes |
+| `baselines/mcts_outcome.yaml` | MCTS that rewards only a trained model and a valid submission | yes |
+| `baselines/mcts_shaped.yaml` | MCTS with shaped, verifiable stage rewards and feedback | yes |
+| `baselines/hierarchical_mcts.yaml` | Stage-wise MCTS with tool masking | yes |
+| `baselines/react_code.yaml` | Writes and executes Python instead of using tools (contrast baseline) | yes |
+| `baselines/hierarchical_react.yaml` | Stage-wise ReAct with tool masking | extra |
+
+**Reproducing the paper.** The original code had bugs that affected search behavior, such as a UCT
+term that divided an average by the visit count twice. The baselines fix these by default.
+`baselines/paper/*.yaml` sets `profile: paper`, which restores the original behavior exactly, so the
+published numbers can be reproduced. Each divergence is a named flag, documented in the agent's module.
+
+Any OpenAI-compatible endpoint works, including vLLM, Azure and LiteLLM. Set `--base-url` or
+`OPENAI_BASE_URL`. Open models that emit tool calls as JSON text are handled.
+
+## Evaluate your own agent
+
+**Option 1: plug into the runner.** Subclass `Agent`. You get the prompt, paths and a usage-tracked
+model through `RunContext`:
 
 ```python
-CHALLENGES = {
-    "your_competition": """
-        Competition description and instructions...
-        Data location: data/your_competition/
-        Target: predict_column
-        Submission format: id,prediction
-    """
+from mltoolbench.agents import Agent, RunContext
+from mltoolbench.env import ToolSession
+
+class MyAgent(Agent):
+    name = "my_agent"
+
+    def run(self, ctx: RunContext):
+        session = ToolSession()               # the 61 tools + a fresh scratchpad
+        tools = session.openai_tools()        # OpenAI function-calling schemas
+        prompt = ctx.prompt()                 # task description, says where to save the submission
+        ...                                   # your loop: result_text = session.call(name, args)
+        # the submission must end up at ctx.submission_path
+```
+
+```bash
+mltoolbench run --agent my_package.my_module:MyAgent --model gpt-4o
+```
+
+**Option 2: use only the pieces.** `ToolSession` works with any framework, or with raw API calls. To
+score a submission, run `mltoolbench grade <task> submission.csv`, or call
+`mltoolbench.grading.grade_submission`. LangGraph users can call
+`mltoolbench.env.langchain.langchain_tools(...)` to get ready-made tools.
+
+Hierarchical agents can restrict tools to a pipeline stage with `ToolSession(stage="modeling")`. The 10
+stages and their tool masks are defined in `src/mltoolbench/tools/catalog.yaml`.
+
+## Evaluation protocol
+
+- A submission is **valid** when all of the following hold:
+  - it has one row per test row, in test order;
+  - its prediction column can be located;
+  - that column contains no NaN or inf values.
+
+  How the prediction column is located is documented in `grading/grader.py`.
+- The metric is each competition's official metric: RMSE, RMSLE, accuracy, AUC, MCC, macro-F1 or
+  normalized Gini. It's converted to the **percentile** of the public Kaggle leaderboard that the
+  score beats.
+- Per task over N = 10 runs, **consistency** is the fraction of valid runs. The **median percentile**
+  counts invalid runs as 0.
+- The headline number is the median across tasks.
+
+## Paper results (GPT-4o, 15 tasks, 10 runs each)
+
+| Method | Consistency | Median percentile |
+|---|---|---|
+| ReAct | 0.6 | 0.58 |
+| LATS | 0.6 | 7.17 |
+| MCTS-Outcome | 0.6 | 7.12 |
+| MCTS-Shaped | 0.8 | 9.36 |
+| Hierarchical MCTS | 0.7 | **17.10** |
+
+Per-task results and GPT-4.1-mini numbers are in the paper. The original evaluation outputs are
+archived in `results/v0/`.
+
+## Repository layout
+
+```
+src/mltoolbench/
+  tools/        the 61 tools (plain pandas/sklearn) + catalog.yaml (scratchpad kinds, stage masks)
+  env/          scratchpad execution, ToolSession, LangGraph adapter
+  tasks/        one folder per task (task.yaml + prompt), registry, data preparation
+  grading/      metrics, grader, aggregation
+  agents/       Agent interface, ReAct, ReAct-Code, MCTS family (agents/mcts/)
+  runner.py     parallel experiment runner
+  cli.py        the `mltoolbench` command
+baselines/      experiment configs (baselines/paper/: exact reproduction)
+results/v0/     the paper's original evaluation outputs
+tests/          API-free tests; agents run end to end against a scripted LLM
+```
+
+Run the tests with `pip install -e ".[agents,dev]" && pytest`.
+
+## Citation
+
+```bibtex
+@article{chittepu2025mltoolbench,
+  title   = {ML-Tool-Bench: Tool-Augmented Planning for ML Tasks},
+  author  = {Chittepu, Yaswanth and Addanki, Raghavendra and Mai, Tung and Rao, Anup and Kveton, Branislav},
+  journal = {arXiv preprint arXiv:2512.00672},
+  year    = {2025}
 }
 ```
-
-### 1. Basic React Agent
-
-Run the basic React agent for automated ML pipeline:
-
-```bash
-python react_ds_agent.py
-```
-
-This agent:
-- Creates a high-level plan for the ML task
-- Uses all available tools without stage restrictions
-- Provides interactive chat interface
-
-### 2. Hierarchical React Agent
-
-Run the hierarchical agent with stage-based progression. Also, provides an interactive chat interface.
-
-```bash
-python hierarchical_react_ds_agent.py
-```
-
-The stage_function_mapping json files map the stage name to the functions that are allowed to be used in that stage.
-
-**Pipeline Stages:**
-1. **Train Data Loading** - Load training dataset
-2. **Test Data Loading** - Load test dataset  
-3. **Combine Train/Test** - Merge datasets for consistent preprocessing
-4. **Data Cleaning** - Handle missing values and data quality issues
-5. **Feature Engineering** - Create, transform, and encode features
-6. **Split Train/Test** - Separate combined dataset back into train/test
-7. **Train Data to Features/Target** - Convert train data to ML format
-8. **Test Data to Features** - Convert test data to ML format
-9. **Modeling** - Train and tune ML models
-10. **Create Submission** - Generate competition submission file
-
-### 3. LATS (Language Agent Tree Search) Agent
-
-Run LATS-powered agents for enhanced decision making:
-
-```bash
-python LATS/lats_ds_reflection.py
-```
-
-### 4. MCTS + Outcome Reward
-
-First, set MCTS_OUTCOME_REWARD=True in the .env file
-
-```bash
-python LATS/lats_ds_verifiable_rewards.py
-```
-
-### 4. MCTS + Hierarchical Verfiable Reward
-
-First, set MCTS_OUTCOME_REWARD=False in the .env file
-
-```bash
-python LATS/lats_ds_verifiable_rewards.py
-```
-
-### 5. Hierarchical MCTS + Verfiable Reward
-
-This uses the same pipeline stages as the hierarchical ReACT agent.
-
-```bash
-python LATS/lats_hierarchical.py
-```
-
-## 🔧 Core Components
-
-### Function-to-Tool Conversion
-
-The framework automatically converts ML functions to LangChain tools using decorators:
-
-```python
-# Decorators available:
-- make_get_and_set_tool: If the function needs to read from and write to scratchpad, use this decorator
-- make_get_tool: If the function only needs to read from scratchpad, use this decorator
-- make_set_tool: If the function only needs to write to scratchpad, use this decorator
-- override_tool: If the function needs to ovveride the variable it read from the scratchpad, with its own result, use this decorator.
-```
-
-The function_to_decorator_map.json file maps the function name to the decorator that should be used to convert the function to a LangChain tool.
-
-### Feature Engineering
-
-Comprehensive feature engineering capabilities in `feature_engineering.py`:
-
-- **Basic Operations**: Create numeric/categorical features, transformations
-- **String Processing**: Pattern extraction, text manipulation
-- **Aggregations**: Group-based statistics and aggregations
-- **Encoding**: Categorical encoding, normalization
-- **Advanced**: Interaction features, polynomial features
-
-### Modeling
-
-Support for multiple ML algorithms in `modeling.py`:
-
-- **Tree-based**: XGBoost, LightGBM, CatBoost, Random Forest
-- **Linear**: Logistic Regression, Linear Regression
-
-### Hyperparameter Tuning
-
-Automated hyperparameter optimization in `hyperparameter_tuning.py`:
-
-- Grid search capabilities for hyperparameter tuning
-- Model-specific parameter spaces
-- Cross-validation integration
-
-
-## 🔧 Configuration
-
-### Environment Variables
-
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `OPENAI_BASE_URL`: OpenAI API base URL  
-- `OPENAI_MODEL`: Model to use (gpt-4, gpt-3.5-turbo, etc.)
-- `COMPETITION_NAME`: Competition identifier from challenges.py
-
-### Function Mappings
-
-- `function_to_decorator_map.json`: Maps functions to appropriate decorators
-- `stage_function_mapping.json`: Maps ML pipeline stages to available functions

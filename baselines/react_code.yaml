@@ -1,0 +1,4 @@
+# ReAct-Code (paper's non-tool contrast baseline): writes and executes full Python solutions.
+agent: {name: react_code, max_iterations: 10}
+runs: 10
+tasks: [all]
