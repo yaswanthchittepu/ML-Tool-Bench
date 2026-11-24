@@ -14,7 +14,7 @@ knowledge.
 | **Tasks** | 15 Kaggle competitions: 7 regression, 6 binary, 2 multiclass. Each uses a 10k-row sample with 20% held out. |
 | **Action space** | 61 tools in 6 groups: io, cleaning, features, dataframe, tuning, evaluation |
 | **Score** | Kaggle leaderboard percentile (median over 10 runs) and consistency (fraction of runs with a valid submission) |
-| **Baselines** | ReAct, LATS, MCTS-Outcome, MCTS-Shaped, Hierarchical MCTS, ReAct-Code (plus Hierarchical ReAct) |
+| **Baselines** | ReAct, LATS, MCTS-Outcome, MCTS-Shaped, Hierarchical MCTS, ReAct-Code |
 
 ## Install
 
@@ -67,15 +67,14 @@ Each run's output lands in `runs/<model>/<agent>/<task>/run_<i>/`:
 
 Each agent also gets a `summary.json` with per-task aggregates.
 
-| Config | Agent | In paper |
-|---|---|---|
-| `baselines/react.yaml` | ReAct: plan, then one tool call per turn | yes |
-| `baselines/lats.yaml` | LATS: MCTS with an LLM-reflection value | yes |
-| `baselines/mcts_outcome.yaml` | MCTS that rewards only a trained model and a valid submission | yes |
-| `baselines/mcts_shaped.yaml` | MCTS with shaped, verifiable stage rewards and feedback | yes |
-| `baselines/hierarchical_mcts.yaml` | Stage-wise MCTS with tool masking | yes |
-| `baselines/react_code.yaml` | Writes and executes Python instead of using tools (contrast baseline) | yes |
-| `baselines/hierarchical_react.yaml` | Stage-wise ReAct with tool masking | extra |
+| Config | Agent |
+|---|---|
+| `baselines/react.yaml` | ReAct: plan, then one tool call per turn |
+| `baselines/lats.yaml` | LATS: MCTS with an LLM-reflection value |
+| `baselines/mcts_outcome.yaml` | MCTS that rewards only a trained model and a valid submission |
+| `baselines/mcts_shaped.yaml` | MCTS with shaped, verifiable stage rewards and feedback |
+| `baselines/hierarchical_mcts.yaml` | Stage-wise MCTS with tool masking |
+| `baselines/react_code.yaml` | Writes and executes Python instead of using tools (contrast baseline) |
 
 **Reproducing the paper.** The original code had bugs that affected search behavior, such as a UCT
 term that divided an average by the visit count twice. The baselines fix these by default.
