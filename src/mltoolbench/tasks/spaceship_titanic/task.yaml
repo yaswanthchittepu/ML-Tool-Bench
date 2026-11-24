@@ -1,0 +1,7 @@
+name: "Spaceship Titanic"
+kaggle: spaceship-titanic
+task_type: binary
+prediction: label
+metric: accuracy
+target: Transported
+id_column: PassengerId

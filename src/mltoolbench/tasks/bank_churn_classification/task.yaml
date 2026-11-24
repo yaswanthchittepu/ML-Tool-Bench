@@ -1,0 +1,7 @@
+name: "Binary Classification with a Bank Churn Dataset"
+kaggle: playground-series-s4e1
+task_type: binary
+prediction: probability
+metric: auc
+target: Exited
+id_column: id

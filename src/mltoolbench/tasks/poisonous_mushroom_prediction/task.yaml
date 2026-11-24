@@ -1,0 +1,7 @@
+name: "Binary Prediction of Poisonous Mushrooms"
+kaggle: playground-series-s4e8
+task_type: binary
+prediction: label
+metric: mcc
+target: class
+id_column: id

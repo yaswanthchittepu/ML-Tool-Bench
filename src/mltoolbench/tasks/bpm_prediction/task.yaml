@@ -1,0 +1,7 @@
+name: "Predicting the Beats-per-Minute of Songs"
+kaggle: playground-series-s5e9
+task_type: regression
+prediction: value
+metric: rmse
+target: BeatsPerMinute
+id_column: id

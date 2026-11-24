@@ -1,0 +1,7 @@
+name: "New York City Taxi Fare Prediction"
+kaggle: new-york-city-taxi-fare-prediction
+task_type: regression
+prediction: value
+metric: rmse
+target: fare_amount
+id_column: key

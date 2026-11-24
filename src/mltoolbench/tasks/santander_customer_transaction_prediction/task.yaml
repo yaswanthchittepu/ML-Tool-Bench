@@ -1,0 +1,8 @@
+name: "Santander Customer Transaction Prediction"
+kaggle: santander-customer-transaction-prediction
+task_type: binary
+# Graded with AUC on hard labels, as in the paper (prediction: label).
+prediction: label
+metric: auc
+target: target
+id_column: ID_code

@@ -1,0 +1,7 @@
+name: "Forest Cover Type (Kernels Only)"
+kaggle: forest-cover-type-kernels-only
+task_type: multiclass
+prediction: label
+metric: accuracy
+target: Cover_Type
+id_column: Id

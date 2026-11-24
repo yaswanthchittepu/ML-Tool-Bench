@@ -1,0 +1,7 @@
+name: "Costa Rican Household Poverty Level Prediction"
+kaggle: costa-rican-household-poverty-prediction
+task_type: multiclass
+prediction: label
+metric: macro_f1
+target: Target
+id_column: Id

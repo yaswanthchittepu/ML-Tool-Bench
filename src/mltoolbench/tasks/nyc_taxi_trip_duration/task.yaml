@@ -1,0 +1,7 @@
+name: "New York City Taxi Trip Duration"
+kaggle: nyc-taxi-trip-duration
+task_type: regression
+prediction: value
+metric: rmsle
+target: trip_duration
+id_column: id

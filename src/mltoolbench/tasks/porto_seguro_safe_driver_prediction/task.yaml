@@ -1,0 +1,7 @@
+name: "Porto Seguro's Safe Driver Prediction"
+kaggle: porto-seguro-safe-driver-prediction
+task_type: binary
+prediction: probability
+metric: normalized_gini
+target: target
+id_column: id

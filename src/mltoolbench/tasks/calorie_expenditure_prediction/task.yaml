@@ -1,0 +1,7 @@
+name: "Predict Calorie Expenditure"
+kaggle: playground-series-s5e5
+task_type: regression
+prediction: value
+metric: rmsle
+target: Calories
+id_column: id
