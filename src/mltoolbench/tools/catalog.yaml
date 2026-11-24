@@ -1,0 +1,111 @@
+# ML-Tool-Bench tool catalog: the benchmark's action space (61 tools).
+#
+# kind — how the tool touches the scratchpad (named-object store):
+#   set       reads nothing, stores its result under the agent-chosen `output` key
+#   get       reads `bindings` from the scratchpad, returns its result as text
+#   get_set   reads `bindings`, stores the result under `output`
+#   override  reads exactly one binding and overwrites it with the result
+# outputs — fixed scratchpad keys for tools that return a tuple (ignores `output`).
+#   convert_dataframe_to_features_target stores only X_test when its target is None.
+
+tools:
+  # --- io ---
+  read_data: {module: io, kind: set}
+  save_model: {module: io, kind: get}
+  load_model: {module: io, kind: set}
+  save_dataframe_to_csv: {module: io, kind: get}
+  # --- cleaning ---
+  fillna_with_value: {module: cleaning, kind: override}
+  fillna_with_median: {module: cleaning, kind: override}
+  fillna_with_mean: {module: cleaning, kind: override}
+  fillna_with_mode: {module: cleaning, kind: override}
+  fillna_with_condition: {module: cleaning, kind: override}
+  fillna_with_multiple_conditions: {module: cleaning, kind: override}
+  fillna_with_conditional_aggregation: {module: cleaning, kind: override}
+  fillna_with_custom_function: {module: cleaning, kind: override}
+  drop_rows_with_missing: {module: cleaning, kind: override}
+  get_missing_summary: {module: cleaning, kind: get}
+  cast_columns: {module: cleaning, kind: override}
+  cast_numeric_columns: {module: cleaning, kind: override}
+  cast_integer_columns_to_float: {module: cleaning, kind: override}
+  cast_categorical_columns: {module: cleaning, kind: override}
+  # --- features ---
+  create_numeric_feature: {module: features, kind: override}
+  create_categorical_feature: {module: features, kind: override}
+  create_conditional_feature: {module: features, kind: override}
+  extract_string_pattern: {module: features, kind: override}
+  split_string_column: {module: features, kind: override}
+  create_group_aggregation: {module: features, kind: override}
+  get_group_aggregation: {module: features, kind: get_set}
+  create_rolling_feature: {module: features, kind: override}
+  create_lag_feature: {module: features, kind: override}
+  create_lead_feature: {module: features, kind: override}
+  extract_datetime_features: {module: features, kind: override}
+  create_time_delta: {module: features, kind: override}
+  apply_custom_function: {module: features, kind: override}
+  one_hot_encode: {module: features, kind: override}
+  label_encode: {module: features, kind: override}
+  normalize_features: {module: features, kind: override}
+  encode_all_categorical_columns: {module: features, kind: override}
+  normalize_all_numerical_columns: {module: features, kind: override}
+  # --- dataframe ---
+  concatenate_train_test: {module: dataframe, kind: get_set}
+  split_combined_into_train_test: {module: dataframe, kind: get_set, outputs: [train_df, test_df]}
+  convert_dataframe_to_features_target: {module: dataframe, kind: get_set, outputs: [X_train, Y_train]}
+  convert_to_dataframe: {module: dataframe, kind: get_set}
+  drop_feature: {module: dataframe, kind: get_set}
+  get_features: {module: dataframe, kind: get_set}
+  concatenate_dataframes: {module: dataframe, kind: get_set}
+  join_dataframes: {module: dataframe, kind: get_set}
+  rename_feature: {module: dataframe, kind: get_set}
+  get_unique_values: {module: dataframe, kind: get_set}
+  get_dataframe_dtypes_summary: {module: dataframe, kind: get}
+  filter_dataframe: {module: dataframe, kind: get_set}
+  # --- tuning ---
+  tune_logistic_regressor: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_linear_regressor: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_random_forest_regressor: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_random_forest_classifier: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_xgboost_regressor: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_xgboost_classifier: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_lightgbm_regressor: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_lightgbm_classifier: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_catboost_regressor: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  tune_catboost_classifier: {module: tuning, kind: get_set, outputs: [best_estimator, best_params, best_cv_score]}
+  # --- evaluation ---
+  evaluate_regression_model: {module: evaluation, kind: get}
+  evaluate_classification_model: {module: evaluation, kind: get}
+  predict_target: {module: evaluation, kind: get_set}
+
+# Hierarchical agents expose only a stage's tools (tool masking, paper §4.5).
+stages:
+  train_data_loading:
+    description: "Train Data Loading"
+    tools: [read_data, get_missing_summary]
+  test_data_loading:
+    description: "TestData Loading"
+    tools: [read_data, get_missing_summary]
+  combine_train_test:
+    description: "Combine Train and Test Data"
+    tools: [concatenate_train_test]
+  data_cleaning:
+    description: "Data Cleaning"
+    tools: [fillna_with_value, fillna_with_median, fillna_with_mean, fillna_with_mode, fillna_with_condition, fillna_with_multiple_conditions, fillna_with_conditional_aggregation, fillna_with_custom_function, get_missing_summary]
+  feature_engineering:
+    description: "Feature Engineering and Transformation"
+    tools: [create_numeric_feature, create_categorical_feature, create_conditional_feature, extract_string_pattern, split_string_column, create_group_aggregation, get_group_aggregation, create_rolling_feature, create_lag_feature, create_lead_feature, extract_datetime_features, create_time_delta, cast_columns, cast_numeric_columns, cast_integer_columns_to_float, cast_categorical_columns, apply_custom_function, one_hot_encode, label_encode, normalize_features, encode_all_categorical_columns, normalize_all_numerical_columns, convert_to_dataframe, concatenate_dataframes, join_dataframes, get_features, drop_feature, rename_feature, filter_dataframe, get_dataframe_dtypes_summary]
+  split_train_test:
+    description: "Split Train and Test Data"
+    tools: [split_combined_into_train_test]
+  train_data_to_features_target:
+    description: "Convert Train Data to Features and Target"
+    tools: [convert_dataframe_to_features_target, get_dataframe_dtypes_summary]
+  test_data_to_features:
+    description: "Convert Test Data to Features "
+    tools: [convert_dataframe_to_features_target, get_dataframe_dtypes_summary]
+  modeling:
+    description: "Model Training"
+    tools: [tune_logistic_regressor, tune_linear_regressor, tune_random_forest_regressor, tune_random_forest_classifier, tune_xgboost_regressor, tune_xgboost_classifier, tune_lightgbm_regressor, tune_lightgbm_classifier, tune_catboost_regressor, tune_catboost_classifier, evaluate_regression_model, evaluate_classification_model]
+  create_submission_dataframe:
+    description: "Make Predictions on Test Data and create submission files"
+    tools: [save_model, save_dataframe_to_csv, predict_target, cast_columns, get_features, concatenate_dataframes, rename_feature, drop_feature, get_dataframe_dtypes_summary]
