@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mltoolbench"
+version = "0.1.0"
+description = "ML-Tool-Bench: a benchmark for tool-augmented planning on tabular ML tasks"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Yaswanth Chittepu" }]
+keywords = ["benchmark", "llm-agents", "tool-use", "planning", "mcts", "tabular", "kaggle"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# The environment, tools and grader: everything needed to evaluate your own agent.
+# The ML stack is pinned exactly to the paper's versions: CV scores feed the MCTS
+# rewards and leaderboard percentiles, so results are only comparable on this stack.
+# (pandas 3 in particular changes copy / string-dtype semantics the tools rely on.)
+# macOS: xgboost and lightgbm need OpenMP — `brew install libomp`.
+dependencies = [
+    "numpy==2.3.1",
+    "pandas==2.3.1",
+    "scikit-learn==1.7.0",
+    "xgboost==3.0.2",
+    "lightgbm==4.6.0",
+    "catboost==1.2.8",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Baseline agents (ReAct, LATS, MCTS variants) built on LangGraph.
+agents = [
+    "langchain-core>=0.3.72,<0.4",
+    "langchain-openai>=0.3.28,<0.4",
+    "langgraph>=0.6.3,<0.7",
+    "python-dotenv>=1.0",
+]
+# Downloading competitions and leaderboards.
+prepare = ["kaggle>=1.7"]
+# Offline analysis and plotting scripts in analysis/.
+analysis = ["matplotlib>=3.8", "seaborn>=0.13"]
+dev = ["pytest>=8", "ruff>=0.6"]
+all = ["mltoolbench[agents,prepare,analysis]"]
+
+[project.scripts]
+mltoolbench = "mltoolbench.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mltoolbench"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["legacy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# Tool docstrings are LLM-facing specs copied verbatim from the paper's runs.
+ignore = ["E501", "W291", "W293"]
+
+[tool.ruff.lint.per-file-ignores]
+# Annotations of tool functions are echoed verbatim into LLM-facing tool messages:
+# modernising typing syntax would change what agents see. Same for the schema wrappers.
+"src/mltoolbench/tools/*" = ["UP", "B006", "B007", "B904", "B905", "E712", "E722"]
+"src/mltoolbench/env/langchain.py" = ["UP006", "UP035"]
