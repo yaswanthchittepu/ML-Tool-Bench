@@ -1,0 +1,3 @@
+agent: {name: lats}
+runs: 10
+tasks: [all]

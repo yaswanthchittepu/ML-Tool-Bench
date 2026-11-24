@@ -1,7 +1,7 @@
 """Verifiable stage rewards (MCTS-Shaped / MCTS-Outcome / Hierarchical MCTS) and the
 LATS reflection judge's output model.
 
-One implementation replaces the five copies in the legacy ``cls.py`` /
+One implementation replaces the five copies in the original (commit c8c36a8) ``cls.py`` /
 ``cls_hierarchical.py``. Checks read the candidate's messages (``[AIMessage with
 one tool call, ToolMessage, ...]``) and the scratchpad *delta* its tool produced;
 they rely on the ``"Applied <tool>"`` message prefix and the fixed output keys of

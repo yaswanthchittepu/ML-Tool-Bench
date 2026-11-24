@@ -1,0 +1,4 @@
+# Reproduces the paper's runs (see agents/mcts/config.py for what profile: paper restores).
+agent: {name: mcts_shaped, profile: paper}
+runs: 10
+tasks: [all]

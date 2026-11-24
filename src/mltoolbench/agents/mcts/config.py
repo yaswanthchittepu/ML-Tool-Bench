@@ -1,6 +1,6 @@
 """Search configuration and the ``paper`` / ``fixed`` profiles.
 
-The paper's numbers were produced by three legacy scripts: LATS by
+The paper's numbers were produced by three scripts of the original code (git commit c8c36a8): LATS by
 ``lats_ds_reflection_parallel.py``; MCTS-Outcome / MCTS-Shaped by
 ``lats_ds_verifiable_rewards_rollout_parallel.py`` and Hierarchical MCTS by
 ``lats_hierarchical_rollout_parallel.py``, both with rollout depth 0 (the

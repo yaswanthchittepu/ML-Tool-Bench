@@ -80,7 +80,12 @@ Each agent also gets a `summary.json` with per-task aggregates.
 **Reproducing the paper.** The original code had bugs that affected search behavior, such as a UCT
 term that divided an average by the visit count twice. The baselines fix these by default.
 `baselines/paper/*.yaml` sets `profile: paper`, which restores the original behavior exactly, so the
-published numbers can be reproduced. Each divergence is a named flag, documented in the agent's module.
+published numbers can be reproduced. Each divergence is a named flag, documented in
+`agents/mcts/config.py` and `agents/code_agent.py`. Two details of the original runs matter here:
+
+- The MCTS numbers came from the rollout implementation at rollout depth 0. Its 0.1 penalty is
+  applied per rollout level, so those runs had **no** per-step depth penalty.
+- The UCT exploration weight was 1.
 
 Any OpenAI-compatible endpoint works, including vLLM, Azure and LiteLLM. Set `--base-url` or
 `OPENAI_BASE_URL`. Open models that emit tool calls as JSON text are handled.
