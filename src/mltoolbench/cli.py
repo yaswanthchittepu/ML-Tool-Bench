@@ -142,8 +142,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     rows = []
     for path in sorted(args.runs_dir.rglob("summary.json")):
         summary = json.loads(path.read_text())
-        agent = summary["config"]["agent"]
-        name = agent if isinstance(agent, str) else agent["name"]
+        name = summary.get("agent_name") or path.parent.name
         model = (summary["config"].get("model") or {}).get("model", "?")
         rows += [{**row, "agent": name, "model": model} for row in summary["per_task"]]
     if not rows:
