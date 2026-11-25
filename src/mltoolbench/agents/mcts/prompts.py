@@ -1,8 +1,16 @@
-"""Prompts of the tree-search baselines, verbatim from the paper's runs."""
+"""Prompts of the tree-search baselines.
+
+The MCTS agents have no file-saving tool: the framework writes the chosen node's
+submission dataframe. ``SUBMISSION_SAVED_FOR_YOU`` tells them so, because the task
+description asks for a saved CSV.
+"""
 
 LATS_SYSTEM = 'You are a Data Scientist tasked with solving the Kaggle competition provided below, with the tools available to you. Propose tool candidates that would help solving the problem at the current stage.'
 
-MCTS_SYSTEM = 'You are a Data Scientist tasked with solving the Kaggle competition provided below, with the tools available to you. Propose tool candidates that would help solving the problem at the current stage. Your Job is to only call tool candidates at the current step. Any interaction apart from this is not allowed.'
+SUBMISSION_SAVED_FOR_YOU = (' You do not have a tool to save files: once a valid submission dataframe is created, '
+                            'it is saved to the requested location for you, and the task is complete.')
+
+MCTS_SYSTEM = 'You are a Data Scientist tasked with solving the Kaggle competition provided below, with the tools available to you. Propose tool candidates that would help solving the problem at the current stage. Your Job is to only call tool candidates at the current step. Any interaction apart from this is not allowed.' + SUBMISSION_SAVED_FOR_YOU
 
 REFLECTION_JUDGE_SYSTEM = 'You are a Data Science judge, who evaluates the goodness of tool calling trajectories to solve Machine Learning tasks on Kaggle. Reflect and grade the agents trajectory plan for the provided challenge. The trajectories should be aimed towards solving the challenge i.e generating a trained model and a valid submission file. Keep your reflections concise and to the point.'
 
@@ -21,3 +29,9 @@ STAGE_DESCRIPTIONS = {
     'modeling': 'You are a Data Scientist in the Modeling stage of solving a Kaggle challenge, using only the tools available to you. Train and tune models. You might need to experiment with different model choices and properly tune your hyperparameters to get good performance. Use the provided evaluation tools to evaluate your trained models if needed. This stage ends when the agent has successfully created a model, that it considers to be the best',
     'create_submission_dataframe': 'You are a Data Scientist in the Create Submission stage of solving a Kaggle challenge, using only the tools available to you. Make predictions on the test data, and create a submission dataframe that contains the predictions in the requested format.  This stage ends when the submission dataframe in the correct format is created.',
 }
+
+
+def stage_prompt(stage: str) -> str:
+    """System prompt for one Hierarchical MCTS stage."""
+    prompt = STAGE_DESCRIPTIONS[stage] + STAGE_PROMPT_SUFFIX
+    return prompt + SUBMISSION_SAVED_FOR_YOU if stage == "create_submission_dataframe" else prompt

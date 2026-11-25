@@ -152,3 +152,13 @@ def test_context_sizes_schedule():
 def test_budget():
     b = Budget(limit=3)
     assert b.take() and b.take() and not b.take()
+
+
+def test_mcts_prompts_say_the_submission_is_saved_for_them():
+    from mltoolbench.agents.mcts.prompts import LATS_SYSTEM, MCTS_SYSTEM, SUBMISSION_SAVED_FOR_YOU, stage_prompt
+    from mltoolbench.agents.mcts.rewards import STAGES
+
+    assert MCTS_SYSTEM.endswith(SUBMISSION_SAVED_FOR_YOU)
+    assert SUBMISSION_SAVED_FOR_YOU in stage_prompt("create_submission_dataframe")
+    assert not any(SUBMISSION_SAVED_FOR_YOU in stage_prompt(s) for s in STAGES[:-1])
+    assert SUBMISSION_SAVED_FOR_YOU not in LATS_SYSTEM  # LATS keeps save_dataframe_to_csv

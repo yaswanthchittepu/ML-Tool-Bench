@@ -7,7 +7,7 @@ from typing import Any, Literal
 from mltoolbench.agents.base import Agent, RunContext
 from mltoolbench.agents.mcts.config import MCTSConfig
 from mltoolbench.agents.mcts.expansion import FRAMEWORK_WRITES_SUBMISSION, Expander, mcts_tools
-from mltoolbench.agents.mcts.prompts import LATS_SYSTEM, MCTS_SYSTEM, STAGE_DESCRIPTIONS, STAGE_PROMPT_SUFFIX
+from mltoolbench.agents.mcts.prompts import LATS_SYSTEM, MCTS_SYSTEM, stage_prompt
 from mltoolbench.agents.mcts.rewards import STAGES, StageVerifier, problem_type
 from mltoolbench.agents.mcts.search import ReflectionJudge, flat_search, hierarchical_search
 from mltoolbench.env import tools_for_stage
@@ -100,7 +100,7 @@ class HierarchicalMCTSAgent(_TreeSearchAgent):
         for stage in STAGES:
             stage_tools = mcts_tools(stage)
             expanders[stage] = Expander(
-                ctx, STAGE_DESCRIPTIONS[stage] + STAGE_PROMPT_SUFFIX,
+                ctx, stage_prompt(stage),
                 bound=stage_tools if cfg.tool_masking else all_tools,
                 executable=stage_tools,  # calls are always executed against the stage's tools
                 parallel_calls=cfg.allow_parallel_candidates, reduce_context_on_error=cfg.reduce_context_on_error,
